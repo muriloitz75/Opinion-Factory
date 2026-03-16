@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"console.log\\(require\\(''./node_modules/jspdf/package.json''\\).version\\); console.log\\(require\\(''./node_modules/html2canvas/package.json''\\).version\\)\")"
+    ]
+  }
+}
