@@ -156,23 +156,23 @@ function standardizeLegalBlocks(html: string): string {
     (match, attrs, inner) => {
       const text = inner.replace(/<[^>]+>/g, '').trim();
 
-      // 1. Parecer (Centralizado)
-      if (text.toUpperCase().startsWith('PARECER')) {
+      // 1. Parecer (Centralizado) - Apenas se for a palavra isolada ou início curto
+      if (text.toUpperCase() === 'PARECER' || (text.toUpperCase().startsWith('PARECER') && text.length < 30)) {
         return `<p class="abnt-centered font-bold abnt-parecer">${inner}</p>`;
       }
 
-      // 2. Metadados (Sem recuo, Alinhamento Esquerda)
-      if (/(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ)/i.test(text)) {
+      // 2. Metadados (Sem recuo) - Apenas se começar com a palavra-chave (ex: "PROCESSO Nº")
+      if (/^(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°])/i.test(text)) {
         return `<p class="abnt-no-indent abnt-left">${inner}</p>`;
       }
 
-      // 3. Data (Alinhado à direita)
-      if (/^[a-zA-ZÀ-ÿ\s]+,\s*\{\{.+\}\}/i.test(text) || /^Imperatriz/i.test(text)) {
+      // 3. Data (Alinhado à direita) - Padrão "Imperatriz, 12 de março de 2024"
+      if (/^[a-zA-ZÀ-ÿ\s]{2,30},\s*(?:\d{1,2}\s+de\s+[a-z]+\s+de\s+\d{4}|\{\{.+\}\})/i.test(text) || /^Imperatriz/i.test(text)) {
         return `<p class="abnt-right abnt-data-block">${inner}</p>`;
       }
 
-      // 4. Fecho (Sem recuo e 6pt superior)
-      if (text.includes('É o parecer. Submeto à douta consideração superior.')) {
+      // 4. Fecho (Sem recuo e 6pt superior) - Exato ou muito similar
+      if (text === 'É o parecer. Submeto à douta consideração superior.' || text.includes('Submeto à douta consideração superior')) {
         return `<p class="abnt-no-indent abnt-closing">${inner}</p>`;
       }
 

@@ -19,8 +19,9 @@ export async function generateFilledDocx(
 
     if (filename.endsWith('.md')) {
       const content = buffer.toString('utf-8');
-      const docxBuffer = await markdownToDocxBuffer(content, safeValues);
-      return { base64: docxBuffer.toString('base64') };
+      const filledBuffer = await markdownToDocxBuffer(content, safeValues);
+      const finalBuffer = await applyMasterEnvelope(filledBuffer);
+      return { base64: finalBuffer.toString('base64') };
     }
 
     // .docx — pipeline original
@@ -33,18 +34,105 @@ export async function generateFilledDocx(
     });
     doc.render(safeValues);
 
-    // Pós-processamento para paridade com Preview (ABNT / Padronização Legal)
+    // 1. Padronização ABNT/Legal do conteúdo preenchido
     const xml = doc.getZip().file('word/document.xml')?.asText();
     if (xml) {
       const standardizedXml = standardizeDocxXml(xml);
       doc.getZip().file('word/document.xml', standardizedXml);
     }
 
-    const filled = doc.getZip().generate({ type: 'nodebuffer' });
-    return { base64: filled.toString('base64') };
+    const filledBuffer = doc.getZip().generate({ type: 'nodebuffer' });
+    
+    // 2. Aplicação do Envelope (Template Mestre)
+    const finalBuffer = await applyMasterEnvelope(filledBuffer);
+    return { base64: finalBuffer.toString('base64') };
   } catch (err) {
     console.error('Erro ao gerar documento:', err);
     return { base64: '', error: 'Falha ao gerar o documento.' };
+  }
+}
+
+/**
+ * Envelopa o conteúdo de um DOCX preenchido dentro do arquivo Docs/Modelo.docx.
+ * Preserva cabeçalhos, rodapés e margens do mestre.
+ */
+async function applyMasterEnvelope(contentBuffer: Buffer): Promise<Buffer> {
+  try {
+    const masterPath = path.join(process.cwd(), 'model', 'modelo.docx');
+    const masterBuffer = await fs.readFile(masterPath);
+    const masterZip = new PizZip(masterBuffer);
+    const masterXml = masterZip.file('word/document.xml')?.asText();
+    
+    if (!masterXml) return contentBuffer;
+
+    const contentZip = new PizZip(contentBuffer);
+    const contentXml = contentZip.file('word/document.xml')?.asText() || '';
+    
+    // Extrai blocos de conteúdo do body (parágrafos e tabelas)
+    const contentMatch = contentXml.match(/<w:body>([\s\S]*?)(?:<w:sectPr[\s\S]*?<\/w:sectPr>)?<\/w:body>/);
+    let injectedContent = contentMatch ? contentMatch[1] : '';
+
+    if (injectedContent) {
+      // 1. Aplicar 12pt de distância do cabeçalho (w:before="240" no primeiro parágrafo)
+      injectedContent = injectedContent.replace(/<w:p(?: [^>]*)?>/, (match) => {
+        let pPr = '';
+        const pPrMatch = match.match(/<w:pPr(?: [^>]*)?>[\s\S]*?<\/w:pPr>/);
+        if (pPrMatch) pPr = pPrMatch[0];
+        else pPr = '<w:pPr></w:pPr>';
+
+        const modifiedPPr = setXmlTag(pPr, 'w:spacing', 'w:before', '240');
+        
+        if (pPrMatch) return match.replace(pPr, modifiedPPr);
+        return match.replace(/(<w:p(?: [^>]*)?>)/, `$1${modifiedPPr}`);
+      });
+
+      // 2. Aplicar 6pt de distância do rodapé (w:after="120" no último parágrafo)
+      const pBlocks = injectedContent.match(/<w:p(?: [^>]*)?>[\s\S]*?<\/w:p>/g);
+      if (pBlocks && pBlocks.length > 0) {
+        const lastP = pBlocks[pBlocks.length - 1];
+        let pPr = '';
+        const pPrMatch = lastP.match(/<w:pPr(?: [^>]*)?>[\s\S]*?<\/w:pPr>/);
+        if (pPrMatch) pPr = pPrMatch[0];
+        else pPr = '<w:pPr></w:pPr>';
+
+        const modifiedPPr = setXmlTag(pPr, 'w:spacing', 'w:after', '120');
+        
+        let newLastP = '';
+        if (pPrMatch) newLastP = lastP.replace(pPr, modifiedPPr);
+        else newLastP = lastP.replace(/(<w:p(?: [^>]*)?>)/, `$1${modifiedPPr}`);
+        
+        const lastIndex = injectedContent.lastIndexOf(lastP);
+        injectedContent = injectedContent.substring(0, lastIndex) + newLastP + injectedContent.substring(lastIndex + lastP.length);
+      }
+    }
+
+    // 2. Localizar o sectPr do mestre e ajustar MARGEM INFERIOR para 6pt (120 twips)
+    let masterSectPrMatch = masterXml.match(/<w:sectPr[\s\S]*?<\/w:sectPr>/);
+    let masterSectPr = masterSectPrMatch ? masterSectPrMatch[0] : '';
+
+    if (masterSectPr) {
+      const footerMatch = masterSectPr.match(/w:footer="(\d+)"/);
+      const footerVal = footerMatch ? parseInt(footerMatch[1]) : 720;
+
+      // Cálculo do novo limite inferior: Footer + 6pt (120 twips)
+      const newBottom = footerVal + 120;
+
+      // Injeta APENAS a nova margem inferior no sectPr do mestre
+      // Mantemos o w:top original para não sobrepor o cabeçalho
+      masterSectPr = setXmlTag(masterSectPr, 'w:pgMar', 'w:bottom', newBottom.toString());
+    }
+
+    // 3. Montar o novo document.xml do mestre:
+    const newMasterXml = masterXml.replace(
+      /<w:body>[\s\S]*?<\/w:body>/,
+      `<w:body>${injectedContent}${masterSectPr}</w:body>`
+    );
+
+    masterZip.file('word/document.xml', newMasterXml);
+    return masterZip.generate({ type: 'nodebuffer' });
+  } catch (err) {
+    console.warn('Processamento de Envelope: Modelo.docx não encontrado ou erro. Usando conteúdo puro.', err);
+    return contentBuffer;
   }
 }
 
@@ -71,8 +159,8 @@ function standardizeDocxXml(xml: string): string {
     let modifiedPPr = pPr;
 
     // Detecção refinada para metadados e blocos legais
-    const isParecer = text.toUpperCase().includes('PARECER') && text.length < 150;
-    const isMetadata = /(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ)/i.test(text.slice(0, 100));
+    const isParecer = (text.toUpperCase() === 'PARECER' || (text.toUpperCase().startsWith('PARECER') && text.length < 30));
+    const isMetadata = /^(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°])/i.test(text);
     const isClosing = text.includes('É o parecer. Submeto à douta consideração superior.');
     const isDate = /^[a-zA-ZÀ-ÿ\s]+,\s*\{\{.+\}\}/i.test(text) || /^Imperatriz/i.test(text);
 
