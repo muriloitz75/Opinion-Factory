@@ -9,12 +9,17 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "docx": "^9.6.1",
+    "docx-preview": "^0.3.7",
+    "docxtemplater": "^3.68.3",
     "framer-motion": "^12.36.0",
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.14.0",
     "jspdf": "^4.2.0",
     "lucide-react": "^0.577.0",
+    "mammoth": "^1.12.0",
     "next": "16.1.6",
+    "pizzip": "^3.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0"

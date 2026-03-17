@@ -105,17 +105,22 @@ body {
 }
 
 .app-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 800;
+  background: var(--gradient-primary);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   line-height: 1.2;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .app-subtitle {
   font-size: 11px;
+  font-weight: 500;
   color: var(--text-muted);
   line-height: 1.2;
+  opacity: 0.8;
 }
 
 .app-header-actions {
@@ -189,7 +194,7 @@ body {
   height: 48px;
   padding: 0 16px;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border-strong);
   border-radius: var(--radius-lg);
   color: var(--text-primary);
   font-size: 14px;
@@ -202,16 +207,16 @@ body {
 
 .input-field:hover,
 .select-field:hover {
-  border-color: var(--border-strong);
+  border-color: var(--accent);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
 }
 
 .input-field:focus,
 .select-field:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), 0 10px 20px rgba(37, 99, 235, 0.08);
+  box-shadow: 0 0 0 1px var(--accent), 0 12px 24px rgba(37, 99, 235, 0.12);
   background: #fff;
   transform: translateY(-1px);
 }
@@ -257,7 +262,7 @@ body {
 }
 
 .sidebar-footer {
-  padding: 24px 28px;
+  padding: 20px 28px 24px;
   border-top: 1px solid var(--border);
   flex-shrink: 0;
   background: var(--sidebar-bg);
@@ -337,6 +342,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 8px 20px;
   background: var(--workspace-toolbar);
   backdrop-filter: blur(12px);
@@ -367,7 +373,7 @@ body {
 .preview-container {
   flex: 1;
   overflow: auto;
-  padding: 36px 24px 60px;
+  padding: 40px 24px 80px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -460,6 +466,29 @@ body {
   color: var(--text-primary);
 }
 
+.btn-icon--ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+  opacity: 0.7;
+}
+
+.btn-icon--ghost:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: #ef4444; /* Vermelho discreto no hover */
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
 /* ── Loading ────────────────────────────────── */
 .loading-state {
   display: flex;
@@ -471,243 +500,571 @@ body {
   background: var(--bg);
 }
 
+/* ══════════════════════════════════════════════
+   FOLHA DE PAPEL — Preview ABNT NBR 14724:2011
+   ══════════════════════════════════════════════ */
+
 .paper-page {
-  background: white;
-  color: #000;
+  background: #fff;
   width: 210mm;
-  height: 297mm !important;
-  /* Margens ABNT NBR 14724: Topo 3cm, Esquerda 3cm, Direita 2cm, Fundo 2cm */
-  padding: 30mm 20mm 20mm 30mm;
-  font-family: 'Times New Roman', Times, serif !important;
-  font-feature-settings: "kern" 1, "liga" 1;
-  letter-spacing: 0 !important;
-  font-weight: normal !important;
-  text-transform: none !important;
-  /* Resetting global UI letter-spacing */
-  position: relative;
-  display: flex;
-  flex-direction: column;
+  min-height: 297mm;
+  /* Margens ABNT: Topo 3cm, Esquerda 3cm, Direita 2cm, Fundo 2cm */
+  padding: 30mm 20mm 30mm 30mm;
   box-sizing: border-box;
-  margin: 0 0 40px 0 !important;
-  overflow: hidden;
-  page-break-after: always !important;
-  page-break-inside: avoid !important;
-  page-break-before: avoid !important;
+  position: relative;
   box-shadow:
-    0 1px 1px rgba(0, 0, 0, 0.15),
-    0 2px 2px rgba(0, 0, 0, 0.15),
-    0 4px 4px rgba(0, 0, 0, 0.15),
-    0 8px 8px rgba(0, 0, 0, 0.15),
-    0 16px 16px rgba(0, 0, 0, 0.15),
-    0 32px 32px rgba(0, 0, 0, 0.15);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+    0 2px 4px rgba(0,0,0,0.12),
+    0 8px 16px rgba(0,0,0,0.12),
+    0 24px 48px rgba(0,0,0,0.12);
+  flex-shrink: 0;
 }
 
-.paper-page:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 1px 1px rgba(0, 0, 0, 0.2),
-    0 2px 2px rgba(0, 0, 0, 0.2),
-    0 4px 4px rgba(0, 0, 0, 0.2),
-    0 8px 8px rgba(0, 0, 0, 0.2),
-    0 16px 16px rgba(0, 0, 0, 0.2),
-    0 32px 32px rgba(0, 0, 0, 0.2),
-    0 64px 64px rgba(0, 0, 0, 0.1);
-}
-
-.paper-page:last-child {
-  page-break-after: avoid !important;
-}
-
-.paper-content * {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  line-height: 1.5 !important;
-  font-family: 'Times New Roman', Times, serif !important;
-  letter-spacing: 0 !important;
-}
-
+/* ── Corpo do texto (ABNT NBR 14724:2011) ─────
+   - Fonte: Times New Roman 12pt
+   - Espaçamento: 1,5 entre linhas
+   - Alinhamento: justificado
+   - Recuo 1ª linha: 1,25cm
+   ─────────────────────────────────────────── */
 .paper-content {
-  font-size: 12pt !important;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: #000;
+  word-break: break-word;
+  hyphens: auto;
+  orphans: 3;
+  widows: 3;
+
+  /* Reset de herança do layout da UI */
+  letter-spacing: 0;
+  font-weight: normal;
+  text-transform: none;
+}
+
+/* ── Parágrafo ── */
+.paper-content p {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 1.5;
   text-align: justify;
   text-justify: inter-word;
-  word-wrap: break-word;
-  white-space: normal;
-  color: #000;
-  hyphens: auto;
-  font-family: 'Times New Roman', Times, serif !important;
-  padding-bottom: 5mm;
-}
-
-/* ABNT: Recuo de 1,25cm na primeira linha de parágrafos */
-.paper-content p {
   text-indent: 1.25cm;
-  text-align: justify;
-  margin: 0 !important;
-  padding: 0 !important;
+  margin: 0;
+  padding: 0;
+  color: #000;
 }
 
-/* Identificação do Documento (Parecer, Processo, etc.) */
-.official-centered {
+/*
+ * ABNT NBR 14724: Todos os parágrafos de corpo de texto recebem recuo de 1,25cm.
+ */
+
+/*
+ * Parágrafos com alinhamento inline definido pelo mammoth (ex: centralizado)
+ * já sobrescrevem text-align via inline style (maior especificidade).
+ * Esta regra garante o fallback justificado para todos os demais.
+ */
+
+/* ── Parágrafos especiais gerados pelo mammoth ── */
+.paper-content p.abnt-centered {
   text-align: center !important;
-  text-indent: 0 !important;
-  margin-top: 12pt !important;
-  /* Compressed from 24pt */
+  text-indent: 0;
+}
+
+.paper-content p.abnt-parecer {
   margin-bottom: 12pt !important;
-  /* Compressed from 18pt */
-  display: block;
 }
 
-.official-left {
+.paper-content p.abnt-no-indent {
+  text-indent: 0;
+}
+
+.paper-content p.abnt-left {
   text-align: left !important;
-  text-indent: 0 !important;
-  margin-bottom: 4pt;
-  /* Tightened */
-  display: block;
-}
-
-/* Listas Oficiais */
-.paper-content ul,
-.paper-content ol {
-  margin-left: 2.5cm;
-  margin-bottom: 0;
-  /* Compressed */
   text-indent: 0;
-  padding-left: 0;
 }
 
-.paper-content li {
-  margin-bottom: 2pt;
-  /* Tightened */
+.paper-content p.abnt-right {
+  text-align: right !important;
   text-indent: 0;
-  padding-left: 0.5cm;
 }
 
-.paper-content li p {
-  text-indent: 0 !important;
-  margin-bottom: 0;
+.paper-content p.abnt-closing {
+  margin-top: 6pt !important;
 }
 
-/* Tópicos e Subtópicos - ABNT: h1 centralizado, h2/h3 à esquerda; espaçamento 12pt antes, 6pt depois */
-.paper-content h1 {
-  padding-top: 12pt !important;
-  padding-bottom: 6pt !important;
-  margin: 0 !important;
+.paper-content p.abnt-data-block {
+  margin-top: 12pt !important;
+}
+
+.paper-content .font-bold {
+  font-weight: bold !important;
+}
+
+.paper-content p.abnt-footnote {
+  font-size: 10pt;
+  line-height: 1.0;
   text-indent: 0;
-  font-weight: bold;
-  text-transform: uppercase;
+  border-top: 0.5pt solid #888;
+  padding-top: 4pt;
+  margin-top: 8pt;
+}
+
+/* ── Títulos primários H1–H3 (CAIXA ALTA, negrito) ── */
+.paper-content h1,
+.paper-content h2,
+.paper-content h3 {
+  font-family: 'Times New Roman', Times, serif;
   font-size: 12pt;
+  font-weight: bold;
+  line-height: 1.5;
+  text-transform: uppercase;
+  text-indent: 0;
+  color: #000;
+  padding: 0;
+  /*
+   * ABNT NBR 14724: separado do texto anterior por espaço de 1,5 linha.
+   * Após o título: sem espaço extra — o parágrafo seguinte usa text-indent=0
+   * e a própria line-height de 1,5 cria separação visual adequada.
+   */
+  margin: 24pt 0 12pt 0;
+}
+
+.paper-content h1 {
   text-align: center;
-  line-height: 1.2;
 }
 
 .paper-content h2,
 .paper-content h3 {
-  padding-top: 6pt !important;
-  padding-bottom: 6pt !important;
-  margin: 0 !important;
-  text-indent: 0;
-  font-weight: bold;
-  text-transform: uppercase;
-  font-size: 12pt;
   text-align: left;
-  line-height: 1.2;
 }
 
-/* Ajuste de tabelas se houver */
+/* Primeiro elemento da página: sem margem superior */
+.paper-content > :first-child {
+  margin-top: 0 !important;
+}
+
+/* ── Subtítulos H4–H6 (Sem caixa alta, negrito) ── */
+.paper-content h4,
+.paper-content h5,
+.paper-content h6 {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  font-weight: bold;
+  line-height: 1.5;
+  text-transform: none;
+  text-indent: 0;
+  text-align: left;
+  color: #000;
+  padding: 0;
+  margin: 18pt 0 12pt 0;
+}
+
+/* ── Listas (alinhadas ao recuo padrão) ── */
+.paper-content ul,
+.paper-content ol {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  margin: 0;
+  padding-left: 1.25cm;
+  list-style-position: outside;
+  text-align: justify;
+}
+
+.paper-content li {
+  margin: 0;
+  padding: 0;
+  color: #000;
+}
+
+/* List paragraphs (mammoth style-map) */
+.paper-content p.abnt-list-item {
+  text-indent: 0;
+  padding-left: 1.25cm;
+  margin: 0;
+}
+
+/* ── Citação direta longa (≥4 linhas, ABNT 10.1) ── */
+.paper-content blockquote {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 10pt;
+  line-height: 1.5;
+  text-align: justify;
+  text-indent: 0;
+  margin: 0 0 0 4cm; /* Recuo de 4cm à esquerda */
+  padding: 0;
+  border: none;
+  color: #000;
+}
+
+/* ── Imagens: suprimidas no preview ── */
+.paper-content img {
+  display: none;
+}
+
+/* ── Tabelas (ABNT NBR 14724 §5.9) ── */
 .paper-content table {
   width: 100%;
   border-collapse: collapse;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
   margin: 12pt 0;
-}
-
-.paper-content th,
-.paper-content td {
-  border: 1px solid #000;
-  padding: 8pt;
   text-align: left;
 }
 
-.official-header {
+.paper-content th {
+  font-weight: bold;
+  border: 1pt solid #000;
+  padding: 4pt 6pt;
   text-align: center;
-  margin-top: -10mm;
-  margin-bottom: 2mm;
-  padding-bottom: 3mm;
-  border-bottom: 0.5pt solid #ccc;
+  background: transparent;
 }
 
-.official-header img {
-  width: 110%;
-  margin-left: -5%;
-  height: auto;
-  display: block;
+.paper-content td {
+  border: 1pt solid #000;
+  padding: 4pt 6pt;
 }
 
-.official-signature {
-  margin-top: 24pt;
-  margin-bottom: 5mm;
-  display: flex;
-  flex-direction: column;
-  gap: 32pt;
+/* Linhas da tabela: sem cor de fundo */
+.paper-content tr {
+  background: transparent;
 }
 
-.signature-date {
-  text-align: right;
-  font-size: 12pt;
-  margin-bottom: 24pt;
+/* ── Separador horizontal ── */
+.paper-content hr {
+  border: none;
+  border-top: 0.5pt solid #000;
+  margin: 12pt 0;
 }
 
-.signature-block {
+/* ── Inline ── */
+.paper-content strong,
+.paper-content b {
+  font-weight: bold;
+}
+
+.paper-content em,
+.paper-content i {
+  font-style: italic;
+}
+
+.paper-content code,
+.paper-content pre {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 10pt;
+}
+
+/* ── Empty state do preview ── */
+.preview-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  align-self: center;
-  width: 100%;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none;
 }
 
-.signature-line {
-  border-top: 1px solid #000;
-  width: 280px;
-  margin-bottom: 8pt;
-}
-
-.signature-name {
-  font-weight: bold;
-  font-size: 12pt;
-  text-transform: uppercase;
-}
-
-.signature-role {
-  font-size: 11pt;
-  color: #333;
-}
-
-.page-footer {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  border-top: 0.5pt solid #ccc;
-  padding-top: 3mm;
-}
-
-.official-footer-img {
-  width: 110%;
-  /* Matched header bleed */
-  margin-left: -5%;
-  height: auto;
-  display: block;
-  margin-top: 0;
-  margin-bottom: -5mm;
-  /* Pushes slightly further down into the margin area */
-}
-
-.page-numbering {
+/* ── Numeração de página (opcional, posicionada pelo JS) ── */
+.paper-page-number {
   position: absolute;
   top: 20mm;
   right: 20mm;
-  font-family: Arial, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 10pt;
   color: #000;
   font-weight: normal;
 }
+
+/* ── Upload Modal Tabs ──────────────────────── */
+.upload-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: 3px;
+  margin-bottom: 16px;
+}
+
+.upload-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: var(--font-sans);
+}
+
+.upload-tab:hover {
+  color: var(--text-secondary);
+}
+
+.upload-tab--active {
+  background: var(--surface);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Google Docs Input Row ──────────────────── */
+.gdocs-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.upload-modal-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Icon Button ────────────────────────────── */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.btn-icon:hover:not(:disabled) {
+  border-color: #FECACA;
+  background: #FEF2F2;
+  color: #DC2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.1);
+}
+
+.btn-icon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Variant explícita para clareza semântica */
+.btn-icon--danger:hover:not(:disabled) {
+  border-color: #FECACA;
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
+/* ── Text Button ────────────────────────────── */
+.btn-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s;
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+.btn-text:hover {
+  color: var(--accent);
+}
+
+/* ── Template Select Row ────────────────────── */
+.template-select-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.template-select-row .select-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Form Section Header ────────────────────── */
+.form-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.form-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+/* ── Empty State ────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.empty-state-icon {
+  width: 52px;
+  height: 52px;
+  background: var(--surface-2);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.empty-state-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.empty-state-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-width: 220px;
+  margin: 0;
+}
+
+/* ── Drop Zone ──────────────────────────────── */
+.drop-zone {
+  position: relative;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.drop-zone:hover,
+.drop-zone--active {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.drop-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.drop-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.drop-zone--active .drop-zone-content {
+  color: var(--accent);
+}
+
+.drop-zone-cta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 2px;
+}
+
+.drop-zone-cta strong {
+  color: var(--accent);
+}
+
+.drop-zone-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ── Sidebar Toggle (mobile) ────────────────── */
+.sidebar-toggle {
+  display: none;
+}
+
+/* ── Preview Toolbar Right ──────────────────── */
+.preview-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Mobile Sidebar Overlay ─────────────────── */
+.sidebar-overlay {
+  display: none;
+}
+
+/* ── Responsive ─────────────────────────────── */
+@media (max-width: 900px) {
+  .sidebar-toggle {
+    display: flex;
+    margin-right: 4px;
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    top: 54px;
+    background: rgba(2, 6, 23, 0.5);
+    backdrop-filter: blur(2px);
+    z-index: 25;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 54px;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 30;
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.2);
+  }
+
+  .sidebar--open {
+    transform: translateX(0);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
