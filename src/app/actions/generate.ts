@@ -160,7 +160,6 @@ function standardizeDocxXml(xml: string): string {
 
     // Detecção refinada para metadados e blocos legais
     const isParecer = (text.toUpperCase() === 'PARECER' || (text.toUpperCase().startsWith('PARECER') && text.length < 30));
-    const isMetadata = /^(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°])/i.test(text);
     const isClosing = text.includes('É o parecer. Submeto à douta consideração superior.');
     const isDate = /^[a-zA-ZÀ-ÿ\s]+,\s*\{\{.+\}\}/i.test(text) || /^Imperatriz/i.test(text);
 
@@ -172,15 +171,18 @@ function standardizeDocxXml(xml: string): string {
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:right', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:after', '240');
     }
-    // 2. Metadados (Esquerda, Sem recuo)
-    else if (isMetadata) {
+    // 2. Metadados (Esquerda, Sem recuo, Espaçamento simples)
+    else if (/^\s*(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°]|REF|AUTOS|REFERÊNCIA)/i.test(text)) {
       modifiedPPr = setXmlTag(modifiedPPr, 'w:jc', 'w:val', 'left');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:firstLine', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:left', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:right', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:hanging', '0');
-      // Forçar o espaçamento entre linhas e parágrafo limpo
+      // Espaçamento compacto (simples) e zero após
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:line', '240');
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:lineRule', 'auto');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:after', '0');
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:before', '0');
     }
     // 3. Data (Direita)
     else if (isDate) {

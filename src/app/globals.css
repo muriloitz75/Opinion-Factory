@@ -552,6 +552,7 @@ body {
   margin: 0;
   padding: 0;
   color: #000;
+  white-space: pre-wrap; /* Preserva espaços e quebras manuais do Word */
 }
 
 /*

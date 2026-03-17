@@ -161,8 +161,8 @@ function standardizeLegalBlocks(html: string): string {
         return `<p class="abnt-centered font-bold abnt-parecer">${inner}</p>`;
       }
 
-      // 2. Metadados (Sem recuo) - Apenas se começar com a palavra-chave (ex: "PROCESSO Nº")
-      if (/^(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°])/i.test(text)) {
+      // 2. Metadados (Sem recuo, Alinhado à esquerda) - Processo, Interessado, Assunto, CPF, etc.
+      if (/^\s*(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°]|REF|AUTOS|REFERÊNCIA)/i.test(text)) {
         return `<p class="abnt-no-indent abnt-left">${inner}</p>`;
       }
 

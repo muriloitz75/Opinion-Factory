@@ -84,10 +84,11 @@ function blockToParagraphs(block: TemplateJsonBlock, idx: number): Paragraph[] {
       spacing = { line: LINE, after: 240 }; // 12pt = 240 twips
       bold = true;
     }
-    // 2. Metadados (Sem recuo, Esquerda)
-    else if (/(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ)/i.test(text.slice(0, 100))) {
+    // 2. Metadados (Sem recuo, Esquerda, Espaçamento compacto)
+    else if (/^\s*(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°]|REF|AUTOS|REFERÊNCIA)/i.test(text)) {
       alignment = AlignmentType.LEFT;
       indent = { firstLine: 0 };
+      spacing = { line: 240, after: 0, before: 0 }; // Espaçamento simples
       bold = false;
     }
     // 3. Data (Direita, 12pt sup)
