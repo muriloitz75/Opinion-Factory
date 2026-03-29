@@ -10,14 +10,22 @@
 
 Não alterar a ordem das etapas dos pipelines sem necessidade explícita:
 
-**Markdown:**
+**Markdown → DOCX:**
 ```
-.md → normalizeMarkdown() → markdownToTemplateJson() → replaceVariables() → markdownToDocxBuffer() → applyMasterEnvelope()
+.md → normalizeMarkdown() → markdownToTemplateJson() → replaceVariables()
+    → blockToParagraphs()  ← detecção de blocos (parecer/meta/data/fecho) por posição e conteúdo
+    → markdownToDocxBuffer() → applyMasterEnvelope()
 ```
 
-**DOCX:**
+**DOCX → DOCX:**
 ```
 .docx → docxtemplater.render() → standardizeDocxXml() → applyFechoByPositionDocx() → applyMasterEnvelope()
+```
+
+**Pré-visualização HTML:**
+```
+.md   → markdownToTemplateJson() → markdownToHtml() → normalizeDocumentHtml() → substituição de variáveis (span.var-filled)
+.docx → mammoth (→ marcadores PUA) → normalizeDocumentHtml() → PUA → span.var-filled
 ```
 
 ## Envelope Mestre

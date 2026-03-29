@@ -10,33 +10,31 @@
   --text-primary: #0F172A;
   --text-secondary: #334155;
   --text-muted: #64748B;
-  --accent: #2563EB;
-  --accent-hover: #1D4ED8;
-  --accent-subtle: #DBEAFE;
-  --workspace: #020617;
-  --workspace-toolbar: rgba(15, 23, 42, 0.8);
-  --workspace-mesh: radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.1) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(124, 58, 237, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(37, 99, 235, 0.05) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(124, 58, 237, 0.08) 0px, transparent 50%);
-  --radius-sm: 4px;
-  --radius: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --accent: #0EA5E9;
+  --accent-hover: #0284C7;
+  --accent-subtle: rgba(14, 165, 233, 0.1);
+  --workspace: #F1F5F9;
+  --workspace-toolbar: rgba(255, 255, 255, 0.95);
+  --workspace-mesh: radial-gradient(circle at 2px 2px, rgba(0, 0, 0, 0.05) 1px, transparent 0);
+  --workspace-mesh-size: 24px 24px;
+  --radius-sm: 0px;
+  --radius: 0px;
+  --radius-lg: 2px;
+  --radius-xl: 4px;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --font-sans: var(--font-outfit), var(--font-geist-sans), 'Inter', sans-serif;
+  --shadow-md: 0 10px 25px -3px rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 20px 50px -12px rgb(0 0 0 / 0.12);
+  --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
-  /* Luxury Tokens */
+  /* Premium Technical Tokens (Light) */
   --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-border: rgba(14, 165, 233, 0.2);
   --glass-blur: 16px;
   --sidebar-bg: #FFFFFF;
-  --gradient-primary: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
-  --glow: 0 0 15px rgba(37, 99, 235, 0.15);
+  --gradient-primary: linear-gradient(135deg, #0EA5E9 0%, #0369A1 100%);
+  --glow: 0 0 20px rgba(14, 165, 233, 0.1);
 }
 
 * {
@@ -106,13 +104,11 @@ body {
 
 .app-title {
   font-size: 16px;
-  font-weight: 800;
-  background: var(--gradient-primary);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+  font-weight: 900;
+  color: var(--accent);
+  text-transform: uppercase;
+  line-height: 1.1;
+  letter-spacing: 0.1em;
 }
 
 .app-subtitle {
@@ -335,6 +331,7 @@ body {
   overflow: hidden;
   background: var(--workspace);
   background-image: var(--workspace-mesh);
+  background-size: var(--workspace-mesh-size);
   position: relative;
 }
 
@@ -451,8 +448,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: none;
   border-radius: var(--radius);
@@ -505,18 +502,16 @@ body {
    ══════════════════════════════════════════════ */
 
 .paper-page {
-  background: #fff;
+  flex-shrink: 0;
   width: 210mm;
   min-height: 297mm;
-  /* Margens ABNT: Topo 3cm, Esquerda 3cm, Direita 2cm, Fundo 2cm */
-  padding: 30mm 20mm 30mm 30mm;
-  box-sizing: border-box;
-  position: relative;
-  box-shadow:
-    0 2px 4px rgba(0,0,0,0.12),
-    0 8px 16px rgba(0,0,0,0.12),
-    0 24px 48px rgba(0,0,0,0.12);
-  flex-shrink: 0;
+  padding: 2.54cm 3cm 2.54cm 3cm;
+  background: white;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+  transform-origin: top center;
+  transform: scale(var(--zoom, 1));
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-bottom: 40px;
 }
 
 /* ── Corpo do texto (ABNT NBR 14724:2011) ─────
@@ -617,16 +612,11 @@ body {
   font-family: 'Times New Roman', Times, serif;
   font-size: 12pt;
   font-weight: bold;
-  line-height: 1.5;
+  line-height: 1.2;
   text-transform: uppercase;
   text-indent: 0;
   color: #000;
   padding: 0;
-  /*
-   * ABNT NBR 14724: separado do texto anterior por espaço de 1,5 linha.
-   * Após o título: sem espaço extra — o parágrafo seguinte usa text-indent=0
-   * e a própria line-height de 1,5 cria separação visual adequada.
-   */
   margin: 12pt 0 8pt 0;
 }
 
@@ -1069,8 +1059,183 @@ body {
   }
 }
 
+/* ── Layout Modes ───────────────────────────── */
+.mode-focus .sidebar {
+  position: absolute;
+  left: 24px;
+  top: 80px;
+  bottom: 24px;
+  width: 320px;
+  height: calc(100vh - 104px);
+  z-index: 40;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
+  transform: translateX(-360px);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mode-focus .sidebar:hover,
+.mode-focus .sidebar:focus-within {
+  transform: translateX(0);
+}
+
+.mode-focus .preview-workspace {
+  background: #F1F5F9;
+}
+
+.mode-focus .paper-page {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08), 0 0 2px rgba(14, 165, 233, 0.1);
+}
+
+/* ── Command Palette ────────────────────────── */
+.command-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.3);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+}
+
+.command-palette {
+  width: 100%;
+  max-width: 600px;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.command-search-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.command-search-row input {
+  flex: 1;
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.command-list {
+  max-height: 350px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.command-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.1s;
+}
+
+.command-item:hover {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+/* ── Specific Button styles ─────────────────── */
+.btn-focus-toggle {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
+.btn-focus-toggle:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* ── Zoom Toolbar ───────────────────────────── */
+.zoom-toolbar {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--border);
+  padding: 6px;
+  z-index: 50;
+  box-shadow: var(--shadow-md);
+}
+
+.zoom-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: var(--transition);
+}
+
+.zoom-btn:hover {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.zoom-value {
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 50px;
+  text-align: center;
+  font-family: var(--font-sans);
+  letter-spacing: 0.05em;
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+/* ── Animations ─────────────────────────────── */
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.field-group, 
+.preview-container,
+.sidebar-section,
+.app-header {
+  animation: reveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.field-group:nth-child(1) { animation-delay: 0.1s; }
+.field-group:nth-child(2) { animation-delay: 0.15s; }
+.field-group:nth-child(3) { animation-delay: 0.2s; }
+.field-group:nth-child(4) { animation-delay: 0.25s; }
+.field-group:nth-child(5) { animation-delay: 0.3s; }
 

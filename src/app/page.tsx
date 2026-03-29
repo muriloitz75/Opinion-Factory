@@ -14,6 +14,9 @@ import {
   FileUp,
   RotateCcw,
   LogOut,
+  Plus,
+  Minus,
+  Maximize,
 } from 'lucide-react';
 import { deleteTemplate, getTemplates, Template } from './actions/templates';
 import { uploadTemplate, importFromGoogleDocs } from './actions/upload';
@@ -38,8 +41,39 @@ export default function Home() {
   const [gdocsUrl, setGdocsUrl] = useState('');
   const [gdocsLoading, setGdocsLoading] = useState(false);
   const [previewHtml, setPreviewHtml] = useState('');
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [zoom, setZoom] = useState(1);
   const paperRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette(true);
+      }
+      if (e.key === 'Escape') {
+        setShowCommandPalette(false);
+      }
+      // Zoom Shortcuts
+      if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        setZoom(prev => Math.min(prev + 0.1, 2));
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+        e.preventDefault();
+        setZoom(prev => Math.max(prev - 0.1, 0.5));
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+        e.preventDefault();
+        setZoom(1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     getTemplates().then(data => {
@@ -256,27 +290,82 @@ export default function Home() {
   const hasVariables = selectedTemplate && selectedTemplate.variables.length > 0;
 
   return (
-    <div className="app">
+    <div className={`app ${isFocusMode ? 'mode-focus' : 'mode-technical'}`}>
+      <AnimatePresence>
+        {showCommandPalette && (
+          <motion.div
+            className="command-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowCommandPalette(false)}
+          >
+            <motion.div
+              className="command-palette"
+              initial={{ scale: 0.98, opacity: 0, y: -20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.98, opacity: 0, y: -20 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="command-search-row">
+                <FileSearch className="text-accent" size={18} />
+                <input
+                  autoFocus
+                  placeholder="Buscar modelo de parecer... (ex: ISS, IRPJ)"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="command-list">
+                {templates
+                  .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .map(t => (
+                    <button
+                      key={t.filename}
+                      className="command-item"
+                      onClick={() => {
+                        handleSelectTemplate(t);
+                        setShowCommandPalette(false);
+                        setSearchQuery('');
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <FileText size={16} />
+                        <span>{t.name}</span>
+                      </div>
+                      <span className="text-xs opacity-50">{t.type}</span>
+                    </button>
+                  ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Header ── */}
-      <header className="app-header">
+      <header className={`app-header ${isFocusMode ? 'header-minimal' : ''}`}>
         <div className="app-brand">
-          <button
-            className="btn-ghost sidebar-toggle"
-            onClick={() => setSidebarOpen(o => !o)}
-            aria-label="Abrir menu"
-          >
-            {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
-          <FileText size={18} />
+          {!isFocusMode && (
+            <button
+              className="btn-ghost sidebar-toggle"
+              onClick={() => setSidebarOpen(o => !o)}
+              aria-label="Abrir menu"
+            >
+              {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          )}
+          <FileText size={18} className="text-accent" />
           <div className="app-brand-text">
             <span className="app-title">Opinion Factory</span>
-            <span className="app-subtitle">Gerador de Pareceres Fiscais</span>
+            {!isFocusMode && <span className="app-subtitle">Gerador de Pareceres Fiscais</span>}
           </div>
         </div>
         <div className="app-header-actions">
+          <button className="btn btn-focus-toggle" onClick={() => setIsFocusMode(!isFocusMode)}>
+            {isFocusMode ? 'Modo Técnico' : 'Modo Foco'}
+          </button>
           <button className="btn btn-outline" onClick={() => setShowUploadModal(true)}>
-            <Upload size={14} /> Carregar Modelo
+            <Upload size={14} /> <span className="hide-mobile">Upload</span>
           </button>
           <button className="btn-icon btn-icon--ghost" onClick={handleExit} title="Sair da aplicação">
             <LogOut size={16} />
@@ -428,12 +517,14 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="preview-container">
+          <div
+            className="preview-container"
+            style={{ '--zoom': zoom } as React.CSSProperties}
+          >
             {previewHtml ? (
-              <div className="paper-page">
+              <div className="paper-page" ref={paperRef}>
                 <div
                   className="paper-content"
-                  ref={paperRef}
                   dangerouslySetInnerHTML={{ __html: previewHtml }}
                 />
               </div>
@@ -443,6 +534,33 @@ export default function Home() {
                 <p>Selecione um modelo para visualizar o preview</p>
               </div>
             )}
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="zoom-toolbar">
+            <button
+              className="zoom-btn"
+              onClick={() => setZoom(prev => Math.max(prev - 0.1, 0.5))}
+              title="Zoom Out (Ctrl -)"
+            >
+              <Minus size={16} />
+            </button>
+            <div className="zoom-value">{Math.round(zoom * 100)}%</div>
+            <button
+              className="zoom-btn"
+              onClick={() => setZoom(prev => Math.min(prev + 0.1, 2))}
+              title="Zoom In (Ctrl +)"
+            >
+              <Plus size={16} />
+            </button>
+            <div className="w-[1px] h-4 bg-border mx-1" />
+            <button
+              className="zoom-btn"
+              onClick={() => setZoom(1)}
+              title="Reset Zoom (Ctrl 0)"
+            >
+              <Maximize size={16} />
+            </button>
           </div>
         </div>
       </div>

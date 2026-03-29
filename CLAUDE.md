@@ -23,16 +23,33 @@ npm run lint     # Verificação ESLint
 - **html2pdf.js / jspdf** — Exportação para PDF
 
 ### Estrutura de Diretórios
-- `src/app/page.tsx` — UI de página única (todo o estado reside aqui)
-- `src/app/actions/` — Server Actions: `generate.ts`, `render.ts`, `templates.ts`, `upload.ts`
-- `src/lib/` — Pipeline central de processamento
-- `Docs/` — Arquivos de template (`.md` e `.docx`)
-- `model/modelo.docx` — Template mestre (cabeçalhos/rodapés institucionais aplicados a toda saída)
+
+```
+src/
+├── app/
+│   ├── page.tsx              # UI de página única (todo o estado reside aqui)
+│   ├── globals.css           # Estilos globais e classes ABNT
+│   └── actions/
+│       ├── generate.ts       # Geração DOCX: standardizeDocxXml, applyFechoByPositionDocx, applyMasterEnvelope
+│       ├── render.ts         # Pré-visualização HTML: docxToHtml (mammoth + normalização)
+│       ├── templates.ts      # Listagem de templates em Docs/
+│       └── upload.ts         # Upload e importação do Google Docs
+└── lib/
+    ├── markdown-normalizer.ts  # Normalização estrutural do Markdown (fonte de verdade ABNT)
+    ├── template-json.ts        # Parser Markdown → TemplateJsonDocument + substituição de variáveis
+    ├── template-markdown.ts    # TemplateJson → DOCX (pipeline .md) + markdownToHtml
+    ├── template-docx.ts        # Utilitários para templates .docx
+    ├── html-normalize.ts       # normalizeDocumentHtml: 4 fases de normalização ABNT do HTML
+    └── parser.ts               # Utilitários de parsing auxiliares
+
+Docs/                           # Arquivos de template (.md e .docx)
+model/modelo.docx               # Template mestre (cabeçalho/rodapé institucional)
+```
 
 ## Regras Específicas
 
 Regras detalhadas por domínio estão em `.claude/rules/`:
 
 - [`architecture.md`](.claude/rules/architecture.md) — Server Actions, pipelines de processamento, envelope mestre, sistema de variáveis
-- [`abnt.md`](.claude/rules/abnt.md) — Tipografia, layout, estrutura de blocos, normalização de Markdown
+- [`abnt.md`](.claude/rules/abnt.md) — Tipografia, layout, estrutura de blocos, normalização de Markdown e HTML
 - [`ui.md`](.claude/rules/ui.md) — Idioma (pt-BR), debounce, tipos de input, upload/importação

@@ -36,9 +36,9 @@ Cada bloco de documento tem classe CSS e estilo de parágrafo DOCX distintos:
 
 | Fase | Nome             | O que faz                                                          |
 |------|------------------|--------------------------------------------------------------------|
-| 1    | Purificação      | Remove `&nbsp;`, spans vazios, parágrafos `<p>` completamente vazios |
+| 1    | Purificação      | Remove `&nbsp;`, spans vazios, parágrafos `<p>` completamente vazios, soft-hyphens, zero-width chars, spans com estilo inline |
 | 2    | Estrutura        | Promove `<p><strong>CAIXA ALTA</strong></p>` para `<h1>`–`<h3>`, agrupa listas `<ul>` consecutivas |
-| 3    | Blocos Legais    | Aplica classes ABNT a blocos de parecer, metadados, data e fecho  |
+| 3    | Blocos Legais    | `standardizeLegalBlocks()` aplica classes ABNT por conteúdo (parecer, metadados, data, fecho-fallback); `applyFechoByPosition()` aplica fecho por posição se ainda não detectado |
 | 4    | Polimento        | Colapsa múltiplos espaços em branco entre blocos                  |
 
 > **Nota:** `removeHeadingIndent()` foi removida do pipeline (Fase 3). A regra ABNT de "sem recuo no 1º parágrafo após título" é da norma acadêmica e não se aplica a pareceres fiscais, onde todos os parágrafos de corpo recebem recuo.
