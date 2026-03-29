@@ -5,7 +5,8 @@ Estas regras se aplicam a qualquer código que gere, processe ou exiba documento
 ## Tipografia e Layout
 
 - Fonte: Times New Roman 12pt
-- Margens: 3cm superior/esquerda — 2cm inferior/direita
+- Margens: esquerda 3cm — inferior/direita 2cm
+- Margem superior DOCX: `w:top=2152` twips (~3,8cm) — calculada para garantir 12pt entre a linha separadora do cabeçalho institucional e o início do texto em todas as páginas
 - Espaçamento entre linhas: 1,5 (360 twips em DOCX)
 - Recuo de primeira linha: 1,25cm
 
@@ -18,8 +19,8 @@ Cada bloco de documento tem classe CSS e estilo de parágrafo DOCX distintos:
 | `parecer`  | `abnt-centered abnt-parecer`      | Linha "PARECER Nº ..."                   |
 | `metadata` | `abnt-no-indent abnt-left`        | Linhas de cabeçalho (Interessado, etc.)  |
 | `date`     | `abnt-right abnt-data-block`      | Linha de data                            |
-| `section`  | `<h1>` / `<h2>` / `<h3>`         | Títulos de seção (I — RELATÓRIO, etc.)   |
-| `closing`  | `abnt-no-indent abnt-closing`     | Encerramento e assinatura                |
+| `section`  | `<h1>` / `<h2>` / `<h3>`         | Títulos de seção — **12pt superior, 8pt inferior** |
+| `closing`  | `abnt-no-indent abnt-closing`     | Encerramento e assinatura — **8pt superior** — detectado por **posição** (último parágrafo de corpo antes do bloco de data), com conteúdo como fallback |
 | `body`     | *(padrão)*                        | Parágrafos de corpo — recuo 1,25cm       |
 
 ## Normalização de Markdown

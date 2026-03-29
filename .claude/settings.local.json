@@ -22,7 +22,8 @@
       "Bash(git status --porcelain)",
       "Bash(node --check .claude/workflows/scripts/quality-gate.js)",
       "Bash(node --check .claude/workflows/scripts/validate-template.js)",
-      "Bash(node --check .claude/workflows/scripts/rules-sync.js)"
+      "Bash(node --check .claude/workflows/scripts/rules-sync.js)",
+      "Bash(node -e \":*)"
     ]
   },
   "hooks": {

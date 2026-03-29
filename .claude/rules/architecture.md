@@ -17,7 +17,7 @@ Não alterar a ordem das etapas dos pipelines sem necessidade explícita:
 
 **DOCX:**
 ```
-.docx → docxtemplater.render() → standardizeDocxXml() → applyMasterEnvelope()
+.docx → docxtemplater.render() → standardizeDocxXml() → applyFechoByPositionDocx() → applyMasterEnvelope()
 ```
 
 ## Envelope Mestre

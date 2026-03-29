@@ -26,6 +26,7 @@ Para cada regra, confirme se ainda reflete o que está implementado:
 | `applyMasterEnvelope`              | `src/app/actions/generate.ts`                     |
 | `normalizeMarkdown`                | `src/lib/markdown-normalizer.ts`                  |
 | `normalizeDocumentHtml` (4 fases)  | `src/lib/html-normalize.ts`                       |
+| Espaçamentos visuais (headings, blocos) | `src/app/globals.css`                        |
 | Debounce de 700ms                  | `src/app/page.tsx`                                |
 | Tipos de input por nome            | `src/app/page.tsx`                                |
 | Server Actions (sem rotas de API)  | `src/app/actions/` (não deve existir `src/app/api/`) |

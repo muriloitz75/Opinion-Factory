@@ -45,9 +45,16 @@ function headingLevel(text: string): 'h1' | 'h2' | 'h3' {
  */
 function purifyHtml(html: string): string {
   let result = html;
-  // Remove &nbsp; e caracteres de controle invisíveis
+  // Espaços não-quebráveis → espaço comum
   result = result.replace(/&nbsp;|&#160;/g, ' ');
-  // Remove spans sem atributos que poluem a estrutura
+  // Caracteres invisíveis do Word: soft hyphen, zero-width, BOM, word-joiner
+  result = result.replace(/\u00AD/g, '');
+  result = result.replace(/[\u200B\u200C\u200D\uFEFF\u2060]/g, '');
+  // Entidades HTML de controle: carriage return
+  result = result.replace(/&#13;|&#xD;|&#x0D;/gi, '');
+  // Spans com style inline gerados pelo Word/mammoth — mantém apenas o conteúdo
+  result = result.replace(/<span[^>]+style="[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, '$1');
+  // Spans sem atributos
   result = result.replace(/<span>([^<]*)<\/span>/gi, '$1');
   // Normaliza espaços múltiplos
   result = result.replace(/[ \t]+/g, ' ');
@@ -248,13 +255,50 @@ function standardizeLegalBlocks(html: string): string {
         return `<p class="abnt-right abnt-data-block">${inner}</p>`;
       }
 
-      // 4. Fecho (Sem recuo e 6pt superior) - Exato ou muito similar
-      if (text === 'É o parecer. Submeto à douta consideração superior.' || text.includes('Submeto à douta consideração superior')) {
+      // 4. Fecho por conteúdo conhecido (fallback — posição é detectada em applyFechoByPosition)
+      if (text.includes('Submeto à douta consideração superior')) {
         return `<p class="abnt-no-indent abnt-closing">${inner}</p>`;
       }
 
       return match;
     }
+  );
+}
+
+/**
+ * Detecta o fecho por posição: o último parágrafo de corpo (sem classes ABNT especiais)
+ * imediatamente antes do primeiro bloco de data recebe as classes de fecho.
+ * Só aplica se nenhum fecho já foi detectado por conteúdo.
+ */
+function applyFechoByPosition(html: string): string {
+  if (html.includes('abnt-closing')) return html;
+
+  const dataIdx = html.indexOf('abnt-data-block');
+  if (dataIdx === -1) return html;
+
+  const beforeDate = html.substring(0, dataIdx);
+
+  // Encontra o último <p> sem classes ABNT especiais antes do bloco de data
+  const pRegex = /<p(?![^>]*(?:abnt-centered|abnt-no-indent|abnt-right|abnt-parecer|font-bold))[^>]*>[\s\S]*?<\/p>/gi;
+  let lastMatch: { index: number; full: string } | null = null;
+  let m: RegExpExecArray | null;
+  while ((m = pRegex.exec(beforeDate)) !== null) {
+    lastMatch = { index: m.index, full: m[0] };
+  }
+
+  if (!lastMatch) return html;
+
+  const newP = lastMatch.full.replace(/<p([^>]*)>/i, (_, attrs) => {
+    if (/class="/i.test(attrs)) {
+      return `<p${attrs.replace(/class="([^"]*)"/i, 'class="$1 abnt-no-indent abnt-closing"')}>`;
+    }
+    return `<p class="abnt-no-indent abnt-closing"${attrs}>`;
+  });
+
+  return (
+    html.substring(0, lastMatch.index) +
+    newP +
+    html.substring(lastMatch.index + lastMatch.full.length)
   );
 }
 
@@ -297,6 +341,7 @@ export function normalizeDocumentHtml(html: string): string {
   
   // FASE 3: Scanner ABNT de Contexto
   result = standardizeLegalBlocks(result);
+  result = applyFechoByPosition(result);
   // Nota: pareceres fiscais recuam TODOS os parágrafos de corpo (incluindo o primeiro
   // após título). A regra "sem recuo no 1º parágrafo de seção" é da ABNT acadêmica
   // e não se aplica aqui. removeHeadingIndent() foi removida do pipeline.

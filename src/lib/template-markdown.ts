@@ -24,7 +24,13 @@ function stripInline(text: string): string {
     .replace(/__([^_]+)__/g, '$1')
     .replace(/\*([^*]+)\*/g, '$1')
     .replace(/_([^_]+)_/g, '$1')
-    .replace(/`([^`]+)`/g, '$1');
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\\([\\`*_{}\[\]()#+\-.!])/g, '$1');
+}
+
+/** Remove backslash escapes de markdown do texto puro (ex: \* → *). */
+function unescapeMarkdown(text: string): string {
+  return text.replace(/\\([\\`*_{}\[\]()#+\-.!])/g, '$1');
 }
 
 const FONT = 'Times New Roman';
@@ -48,16 +54,16 @@ function parseInlineToRuns(
   let m: RegExpExecArray | null;
   while ((m = re.exec(raw)) !== null) {
     if (m[2] !== undefined) {
-      runs.push(new TextRun({ text: m[2], bold: true, italics: true, font: FONT, size: SIZE }));
+      runs.push(new TextRun({ text: unescapeMarkdown(m[2]), bold: true, italics: true, font: FONT, size: SIZE }));
     } else if (m[3] !== undefined) {
-      runs.push(new TextRun({ text: m[3], bold: true, font: FONT, size: SIZE }));
+      runs.push(new TextRun({ text: unescapeMarkdown(m[3]), bold: true, font: FONT, size: SIZE }));
     } else if (m[4] !== undefined || m[5] !== undefined) {
-      runs.push(new TextRun({ text: m[4] ?? m[5], italics: true, font: FONT, size: SIZE }));
+      runs.push(new TextRun({ text: unescapeMarkdown(m[4] ?? m[5]), italics: true, font: FONT, size: SIZE }));
     } else if (m[6] !== undefined) {
-      runs.push(new TextRun({ text: m[6], bold: opts.bold, font: FONT, size: SIZE }));
+      runs.push(new TextRun({ text: unescapeMarkdown(m[6]), bold: opts.bold, font: FONT, size: SIZE }));
     }
   }
-  return runs.length > 0 ? runs : [new TextRun({ text: raw, bold: opts.bold, font: FONT, size: SIZE })];
+  return runs.length > 0 ? runs : [new TextRun({ text: unescapeMarkdown(raw), bold: opts.bold, font: FONT, size: SIZE })];
 }
 
 function blockToParagraphs(block: TemplateJsonBlock, idx: number, blocks: TemplateJsonBlock[]): Paragraph[] {
@@ -86,8 +92,8 @@ function blockToParagraphs(block: TemplateJsonBlock, idx: number, blocks: Templa
         )[block.level - 1],
         alignment: block.level === 1 ? AlignmentType.CENTER : AlignmentType.LEFT,
         spacing: {
-          before: convertMillimetersToTwip(8.47),
-          after: convertMillimetersToTwip(4.23),
+          before: 240,  // 12pt
+          after: 160,   // 8pt
           line: LINE,
         },
       }),
@@ -99,10 +105,29 @@ function blockToParagraphs(block: TemplateJsonBlock, idx: number, blocks: Templa
     // Each sub-line gets its own Paragraph with independent formatting detection.
     const lines = block.text.split('\n').map(l => l.trim()).filter(Boolean);
 
+    // Detecta fecho por posição: o último parágrafo de corpo antes do bloco de data é o fecho,
+    // independente do seu conteúdo textual.
+    const dateRe = /^[a-zA-ZÀ-ÿ\s]+,\s*(?:\d{1,2}\s+de\s+[a-zA-ZÀ-ÿ]+\s+de\s+\d{4}|\d{1,2}\/\d{2}\/\d{4}|\{\{.+\}\})/i;
+    const metaRe = /^\s*(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°]|REF|AUTOS|REFERÊNCIA)/i;
+    const firstLinePlain = lines.length > 0 ? stripInline(lines[0]) : '';
+    const isBlockSpecial = firstLinePlain.toUpperCase().startsWith('PARECER') || metaRe.test(firstLinePlain) || dateRe.test(firstLinePlain);
+
+    let isClosingByPosition = false;
+    if (!isBlockSpecial) {
+      for (let j = idx + 1; j < blocks.length; j++) {
+        const next = blocks[j];
+        if (next.type === 'heading') continue;
+        if (next.type !== 'paragraph') break;
+        const nextFirstLine = stripInline(next.text.split('\n')[0].trim());
+        if (dateRe.test(nextFirstLine)) isClosingByPosition = true;
+        break;
+      }
+    }
+
     return lines.map((lineText, lineIdx) => {
       const plain = stripInline(lineText);
       let alignment: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.JUSTIFIED;
-      let indent = { firstLine: INDENT_125 };
+      let indent: { firstLine: number; left?: number } = { firstLine: INDENT_125 };
       let spacing: { line: number; before?: number; after?: number } = { line: LINE };
       let blockBold = false;
 
@@ -127,10 +152,12 @@ function blockToParagraphs(block: TemplateJsonBlock, idx: number, blocks: Templa
         indent = { firstLine: 0 };
         spacing = { line: LINE, before: 240 };
       }
-      // 4. Fecho
-      else if (/submeto à douta consideração superior/i.test(plain)) {
-        indent = { firstLine: 0 };
-        spacing = { line: LINE, before: 120 };
+      // 4. Fecho (Esquerda, sem recuo) — detectado por posição (último corpo antes da data)
+      //    ou por conteúdo como fallback
+      else if (isClosingByPosition || /submeto à douta consideração superior/i.test(plain)) {
+        alignment = AlignmentType.LEFT;
+        indent = { firstLine: 0, left: 0 };
+        spacing = { line: LINE, before: 160 };
       }
       // Nota: pareceres fiscais recuam todos os parágrafos de corpo,
       // inclusive o primeiro após título. Regra removida intencionalmente.

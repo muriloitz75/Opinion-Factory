@@ -37,7 +37,8 @@ export async function generateFilledDocx(
     // 1. Padronização ABNT/Legal do conteúdo preenchido
     const xml = doc.getZip().file('word/document.xml')?.asText();
     if (xml) {
-      const standardizedXml = standardizeDocxXml(xml);
+      let standardizedXml = standardizeDocxXml(xml);
+      standardizedXml = applyFechoByPositionDocx(standardizedXml);
       doc.getZip().file('word/document.xml', standardizedXml);
     }
 
@@ -73,12 +74,6 @@ async function applyMasterEnvelope(contentBuffer: Buffer): Promise<Buffer> {
     let injectedContent = contentMatch ? contentMatch[1] : '';
 
     if (injectedContent) {
-      // BUG#4 FIX: Em vez de injetar w:before no primeiro <w:p> (que pode ser um bloco
-      // de metadados com before=0), adicionamos um parágrafo vazio de espaçamento
-      // dedicado (12pt) antes de todo o conteúdo. Isso preserva o before=0 dos metadados.
-      const spacerParagraph = '<w:p><w:pPr><w:spacing w:before="240" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:p>';
-      injectedContent = spacerParagraph + injectedContent;
-
       // Aplicar 6pt de distância do rodapé (w:after="120" no último parágrafo real)
       const pBlocks = injectedContent.match(/<w:p(?: [^>]*)?>(?:(?!<\/w:p>)[\s\S])*?<\/w:p>/g);
       if (pBlocks && pBlocks.length > 0) {
@@ -99,7 +94,7 @@ async function applyMasterEnvelope(contentBuffer: Buffer): Promise<Buffer> {
       }
     }
 
-    // 2. Localizar o sectPr do mestre e ajustar MARGEM INFERIOR para 6pt (120 twips)
+    // 2. Localizar o sectPr do mestre e ajustar margens
     const masterSectPrMatch = masterXml.match(/<w:sectPr[\s\S]*?<\/w:sectPr>/);
     let masterSectPr = masterSectPrMatch ? masterSectPrMatch[0] : '';
 
@@ -107,12 +102,14 @@ async function applyMasterEnvelope(contentBuffer: Buffer): Promise<Buffer> {
       const footerMatch = masterSectPr.match(/w:footer="(\d+)"/);
       const footerVal = footerMatch ? parseInt(footerMatch[1]) : 720;
 
-      // Cálculo do novo limite inferior: Footer + 6pt (120 twips)
+      // Margem inferior: Footer + 6pt (120 twips)
       const newBottom = footerVal + 120;
-
-      // Injeta APENAS a nova margem inferior no sectPr do mestre
-      // Mantemos o w:top original para não sobrepor o cabeçalho
       masterSectPr = setXmlTag(masterSectPr, 'w:pgMar', 'w:bottom', newBottom.toString());
+
+      // Margem superior: 12pt (240 twips) após a linha separadora do cabeçalho institucional.
+      // Cálculo: w:header(204) + posOffset da linha(1084580 EMU ÷ 635 ≈ 1708 twips) + 12pt(240) = 2152 twips.
+      // Garante espaçamento uniforme entre cabeçalho e texto em TODAS as páginas.
+      masterSectPr = setXmlTag(masterSectPr, 'w:pgMar', 'w:top', '2152');
     }
 
     // 3. Montar o novo document.xml do mestre:
@@ -167,6 +164,8 @@ function standardizeDocxXml(xml: string): string {
     const isParecer = (text.toUpperCase() === 'PARECER' || (text.toUpperCase().startsWith('PARECER') && text.length < 30));
     const isClosing = /submeto à douta consideração superior/i.test(text);
     const isMetadata = /^\s*(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°]|REF|AUTOS|REFERÊNCIA)/i.test(text);
+    // Detecta parágrafos com estilo de título do Word (Heading1–6, Título 1–6)
+    const isHeading = /<w:pStyle[^>]+w:val="(?:Heading\d+|Heading \d+|T[íi]tulo\s*\d+)"/i.test(pMatch);
 
     // 1. Parecer (Centralizado)
     if (isParecer) {
@@ -209,7 +208,12 @@ function standardizeDocxXml(xml: string): string {
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:right', '0');
       // BUG#3 FIX
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:hanging', '0');
-      modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:before', '120');
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:before', '160');
+    }
+    // 5. Títulos de seção (Heading 1–6) — 12pt superior, 8pt inferior
+    else if (isHeading) {
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:before', '240');
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:after', '160');
     }
     // BUG#1 FIX: Parágrafos normais de corpo — garantir conformidade ABNT
     // firstLine: 1250 twips (1,25cm), justified, espaçamento 1.5 (360 twips)
@@ -237,6 +241,82 @@ function standardizeDocxXml(xml: string): string {
   return processedXml.replace(/<!--TBL_PLACEHOLDER_(\d+)-->/g, (_, idx) => tableBlocks[parseInt(idx)]);
 }
 
+
+/**
+ * Detecta o fecho por posição: o último parágrafo de corpo antes do primeiro parágrafo
+ * de data recebe formatação de fecho (sem recuo, alinhado à esquerda, 8pt superior).
+ * Só aplica se o parágrafo ainda não tiver w:before="160" (já detectado por conteúdo).
+ * Isola tabelas para não considerar parágrafos internos de tabela.
+ */
+function applyFechoByPositionDocx(xml: string): string {
+  // Isola blocos de tabela (mesmo padrão de standardizeDocxXml)
+  const tableBlocks: string[] = [];
+  const xmlWithoutTables = xml.replace(/<w:tbl[\s\S]*?<\/w:tbl>/g, (tblMatch) => {
+    tableBlocks.push(tblMatch);
+    return `<!--TBL_PLACEHOLDER_${tableBlocks.length - 1}-->`;
+  });
+
+  const dateRe = /^[a-zA-ZÀ-ÿ\s]+,\s*(?:\d{1,2}\s+de\s+[a-zA-ZÀ-ÿ]+\s+de\s+\d{4}|\d{1,2}\/\d{2}\/\d{4})/i;
+  const metaRe = /^\s*(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°]|REF|AUTOS|REFERÊNCIA)/i;
+
+  interface ParaEntry { full: string; index: number; isDate: boolean; isBody: boolean; hasClosingSpacing: boolean }
+  const paragraphs: ParaEntry[] = [];
+  const pRegex = /<w:p(?: [^>]*)?>(?:(?!<\/w:p>)[\s\S])*?<\/w:p>/g;
+  let m: RegExpExecArray | null;
+  while ((m = pRegex.exec(xmlWithoutTables)) !== null) {
+    const full = m[0];
+    const text = full.replace(/<[^>]+>/g, '').trim();
+    const isHeading = /<w:pStyle[^>]+w:val="(?:Heading\d+|Heading \d+|T[íi]tulo\s*\d+)"/i.test(full);
+    const isDate = dateRe.test(text);
+    const isMeta = metaRe.test(text);
+    const isParecer = text.toUpperCase().startsWith('PARECER') && text.length < 30;
+    const hasClosingSpacing = /w:before="160"/.test(full);
+    const isBody = !isDate && !isMeta && !isParecer && !isHeading && !!text;
+    paragraphs.push({ full, index: m.index, isDate, isBody, hasClosingSpacing });
+  }
+
+  const firstDateIdx = paragraphs.findIndex(p => p.isDate);
+  if (firstDateIdx <= 0) {
+    return xml.replace(/<!--TBL_PLACEHOLDER_(\d+)-->/g, (_, i) => tableBlocks[parseInt(i)]);
+  }
+
+  let fechoIdx = -1;
+  for (let i = firstDateIdx - 1; i >= 0; i--) {
+    if (paragraphs[i].isBody) { fechoIdx = i; break; }
+  }
+
+  if (fechoIdx === -1 || paragraphs[fechoIdx].hasClosingSpacing) {
+    return xml.replace(/<!--TBL_PLACEHOLDER_(\d+)-->/g, (_, i) => tableBlocks[parseInt(i)]);
+  }
+
+  const fechoPara = paragraphs[fechoIdx];
+  const pMatch = fechoPara.full;
+  let pPr = '';
+  const pPrMatch = pMatch.match(/<w:pPr(?: [^>]*)?>([\s\S]*?)<\/w:pPr>/);
+  if (pPrMatch) pPr = pPrMatch[0];
+  else pPr = '<w:pPr></w:pPr>';
+
+  let modifiedPPr = pPr;
+  modifiedPPr = setXmlTag(modifiedPPr, 'w:jc', 'w:val', 'left');
+  modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:firstLine', '0');
+  modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:left', '0');
+  modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:hanging', '0');
+  modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:before', '160');
+
+  let newPara: string;
+  if (pPrMatch) {
+    newPara = pMatch.replace(pPr, modifiedPPr);
+  } else {
+    newPara = pMatch.replace(/(<w:p(?: [^>]*)?>)/, `$1${modifiedPPr}`);
+  }
+
+  const processed =
+    xmlWithoutTables.substring(0, fechoPara.index) +
+    newPara +
+    xmlWithoutTables.substring(fechoPara.index + fechoPara.full.length);
+
+  return processed.replace(/<!--TBL_PLACEHOLDER_(\d+)-->/g, (_, i) => tableBlocks[parseInt(i)]);
+}
 
 /**
  * Função utilitária para injetar ou atualizar tags de propriedade no XML.
