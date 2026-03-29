@@ -100,7 +100,7 @@ async function applyMasterEnvelope(contentBuffer: Buffer): Promise<Buffer> {
     }
 
     // 2. Localizar o sectPr do mestre e ajustar MARGEM INFERIOR para 6pt (120 twips)
-    let masterSectPrMatch = masterXml.match(/<w:sectPr[\s\S]*?<\/w:sectPr>/);
+    const masterSectPrMatch = masterXml.match(/<w:sectPr[\s\S]*?<\/w:sectPr>/);
     let masterSectPr = masterSectPrMatch ? masterSectPrMatch[0] : '';
 
     if (masterSectPr) {

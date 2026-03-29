@@ -413,7 +413,7 @@ export default function Home() {
         {/* ── Preview ── */}
         <div className="preview-workspace">
           <div className="preview-toolbar">
-            <span className="preview-badge"><FileText size={11} /> Preview do Parecer Fiscal</span>
+            <span className="preview-badge"><FileText size={11} /> PREVIEW do Parecer Fiscal</span>
             <div className="preview-toolbar-right">
               {pageCount > 0 && !rendering && (
                 <span className="preview-badge">

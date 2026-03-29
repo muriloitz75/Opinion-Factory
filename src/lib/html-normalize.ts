@@ -193,7 +193,7 @@ function removeHeadingIndent(html: string): string {
         if (/<p([^>]*)>/i.test(nextPart)) {
           parts[j] = nextPart.replace(/<p([^>]*)>/i, (match, attrs) => {
             // REMOÇÃO REDUNDANTE: Remove qualquer estilo inline de text-indent que possa estar no parágrafo
-            let cleanAttrs = attrs.replace(/style="[^"]*text-indent:[^"]*"/gi, (styleMatch: string) => {
+            const cleanAttrs = attrs.replace(/style="[^"]*text-indent:[^"]*"/gi, (styleMatch: string) => {
                // Limpa apenas o indent de dentro do style
                return styleMatch.replace(/text-indent\s*:\s*([^;]+);?/gi, '');
             });
