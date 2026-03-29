@@ -34,7 +34,33 @@ const MARGIN_3CM = convertMillimetersToTwip(30);
 const MARGIN_2CM = convertMillimetersToTwip(20);
 const INDENT_125 = convertMillimetersToTwip(12.5);
 
-function blockToParagraphs(block: TemplateJsonBlock, idx: number): Paragraph[] {
+/**
+ * Converte markdown inline (**bold**, *italic*, ***bold italic***) em TextRun[].
+ * Preserva formatação no DOCX em vez de descartar com stripInline.
+ */
+function parseInlineToRuns(
+  raw: string,
+  opts: { bold?: boolean }
+): TextRun[] {
+  const runs: TextRun[] = [];
+  // Matches: ***bold italic***, **bold**, *italic*, _italic_, or plain text
+  const re = /(\*\*\*([^*]+)\*\*\*|\*\*([^*]+)\*\*|\*([^*]+)\*|_([^_]+)_|([^*_]+))/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(raw)) !== null) {
+    if (m[2] !== undefined) {
+      runs.push(new TextRun({ text: m[2], bold: true, italics: true, font: FONT, size: SIZE }));
+    } else if (m[3] !== undefined) {
+      runs.push(new TextRun({ text: m[3], bold: true, font: FONT, size: SIZE }));
+    } else if (m[4] !== undefined || m[5] !== undefined) {
+      runs.push(new TextRun({ text: m[4] ?? m[5], italics: true, font: FONT, size: SIZE }));
+    } else if (m[6] !== undefined) {
+      runs.push(new TextRun({ text: m[6], bold: opts.bold, font: FONT, size: SIZE }));
+    }
+  }
+  return runs.length > 0 ? runs : [new TextRun({ text: raw, bold: opts.bold, font: FONT, size: SIZE })];
+}
+
+function blockToParagraphs(block: TemplateJsonBlock, idx: number, blocks: TemplateJsonBlock[]): Paragraph[] {
   if (block.type === 'heading') {
     const isTopLevel = block.level <= 3;
     return [
@@ -60,7 +86,7 @@ function blockToParagraphs(block: TemplateJsonBlock, idx: number): Paragraph[] {
         )[block.level - 1],
         alignment: block.level === 1 ? AlignmentType.CENTER : AlignmentType.LEFT,
         spacing: {
-          before: convertMillimetersToTwip(6.35),
+          before: convertMillimetersToTwip(8.47),
           after: convertMillimetersToTwip(4.23),
           line: LINE,
         },
@@ -69,61 +95,63 @@ function blockToParagraphs(block: TemplateJsonBlock, idx: number): Paragraph[] {
   }
 
   if (block.type === 'paragraph') {
-    const text = stripInline(block.text);
-    let alignment: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.JUSTIFIED;
-    let indent = { firstLine: INDENT_125 };
-    let spacing: { line: number; before?: number; after?: number } = { line: LINE };
-    let bold = false;
+    // Split on hard-break newlines introduced by "  " trailing in markdown.
+    // Each sub-line gets its own Paragraph with independent formatting detection.
+    const lines = block.text.split('\n').map(l => l.trim()).filter(Boolean);
 
-    // Padronização de Blocos Legais (Paridade com Preview)
-    
-    // 1. Parecer (Centralizado, Negrito, 12pt inf)
-    if (text.toUpperCase().startsWith('PARECER')) {
-      alignment = AlignmentType.CENTER;
-      indent = { firstLine: 0 };
-      spacing = { line: LINE, after: 240 }; // 12pt = 240 twips
-      bold = true;
-    }
-    // 2. Metadados (Sem recuo, Esquerda, Espaçamento compacto)
-    else if (/^\s*(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°]|REF|AUTOS|REFERÊNCIA)/i.test(text)) {
-      alignment = AlignmentType.LEFT;
-      indent = { firstLine: 0 };
-      spacing = { line: 240, after: 0, before: 0 }; // Espaçamento simples
-      bold = false;
-    }
-    // 3. Data (Direita, 12pt sup)
-    else if (/^[a-zA-ZÀ-ÿ\s]+,\s*\{\{.+\}\}/i.test(text) || /^Imperatriz/i.test(text)) {
-      alignment = AlignmentType.RIGHT;
-      indent = { firstLine: 0 };
-      spacing = { line: LINE, before: 240 };
-    }
-    // 4. Fecho (Sem recuo, 6pt sup)
-    else if (text.includes('É o parecer. Submeto à douta consideração superior.')) {
-      indent = { firstLine: 0 };
-      spacing = { line: LINE, before: 120 }; // 6pt = 120 twips
-    }
-    // 5. Primeiro parágrafo após título (Sem recuo) - já tratado no index mas reforçado aqui se necessário
-    // No Markdown, idx > 0 && blocks[idx-1].type === 'heading' seria o ideal, 
-    // mas a lógica atual do markdownToDocxBuffer passa idx.
+    return lines.map((lineText, lineIdx) => {
+      const plain = stripInline(lineText);
+      let alignment: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.JUSTIFIED;
+      let indent = { firstLine: INDENT_125 };
+      let spacing: { line: number; before?: number; after?: number } = { line: LINE };
+      let blockBold = false;
 
-    return [
-      new Paragraph({
-        children: [new TextRun({ text, font: FONT, size: SIZE, bold })],
+      // 1. Parecer (Centralizado, Negrito)
+      if (plain.toUpperCase().startsWith('PARECER')) {
+        alignment = AlignmentType.CENTER;
+        indent = { firstLine: 0 };
+        spacing = { line: LINE, after: 240 };
+        blockBold = true;
+      }
+      // 2. Metadados (Esquerda, Sem recuo)
+      else if (/^\s*(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°]|REF|AUTOS|REFERÊNCIA)/i.test(plain)) {
+        alignment = AlignmentType.LEFT;
+        indent = { firstLine: 0 };
+        spacing = { line: LINE, after: 0, before: 0 };
+      }
+      // 3. Data (Direita)
+      else if (
+        /^[a-zA-ZÀ-ÿ\s]+,\s*(?:\d{1,2}\s+de\s+[a-zA-ZÀ-ÿ]+\s+de\s+\d{4}|\{\{.+\}\})/i.test(plain)
+      ) {
+        alignment = AlignmentType.RIGHT;
+        indent = { firstLine: 0 };
+        spacing = { line: LINE, before: 240 };
+      }
+      // 4. Fecho
+      else if (/submeto à douta consideração superior/i.test(plain)) {
+        indent = { firstLine: 0 };
+        spacing = { line: LINE, before: 120 };
+      }
+      // Nota: pareceres fiscais recuam todos os parágrafos de corpo,
+      // inclusive o primeiro após título. Regra removida intencionalmente.
+
+      return new Paragraph({
+        children: parseInlineToRuns(lineText, { bold: blockBold }),
         alignment,
         indent,
         spacing,
-      }),
-    ];
+      });
+    });
   }
 
   if (block.type === 'list') {
-    return block.items.map((item, i) =>
+    return block.items.map((item) =>
       new Paragraph({
         numbering: block.ordered
           ? { reference: 'ordered-list', level: 0 }
           : undefined,
         bullet: block.ordered ? undefined : { level: 0 },
-        children: [new TextRun({ text: stripInline(item), font: FONT, size: SIZE })],
+        children: parseInlineToRuns(item, {}),
         alignment: AlignmentType.JUSTIFIED,
         spacing: { line: LINE },
       })
@@ -150,7 +178,11 @@ export function markdownToHtml(content: string, values: Record<string, string>):
         return `<h${l}>${blockTextToHtml(block.text)}</h${l}>`;
       }
       if (block.type === 'paragraph') {
-        return `<p>${blockTextToHtml(block.text)}</p>`;
+        // Divide em <p> separados para que cada linha receba text-indent independente.
+        // Hard-breaks ("  " no markdown) geram \n no texto; sem essa divisão, só a
+        // primeira linha de um <p> recebe o recuo ABNT — as demais ficam sem indent.
+        const lines = block.text.split('\n').filter(l => l.trim());
+        return lines.map(l => `<p>${blockTextToHtml(l)}</p>`).join('\n');
       }
       if (block.type === 'list') {
         const tag = block.ordered ? 'ol' : 'ul';
@@ -176,7 +208,7 @@ export async function markdownToDocxBuffer(
   const parsed = markdownToTemplateJson(content);
   const filled = replaceVariablesInTemplateJson(parsed, values);
 
-  const children = filled.blocks.flatMap((block, idx) => blockToParagraphs(block, idx));
+  const children = filled.blocks.flatMap((block, idx) => blockToParagraphs(block, idx, filled.blocks));
 
   const doc = new Document({
     numbering: {

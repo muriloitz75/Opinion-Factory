@@ -13,13 +13,14 @@ export async function renderTemplate(
     const filePath = path.join(process.cwd(), 'Docs', filename);
     const buffer = await fs.readFile(filePath);
 
+    let html = '';
     if (filename.endsWith('.md')) {
-      const html = markdownToHtml(buffer.toString('utf-8'), values);
-      return { html };
+      html = markdownToHtml(buffer.toString('utf-8'), values);
+    } else {
+      // .docx — mammoth converte apenas o corpo do documento (sem cabeçalho/rodapé/imagens)
+      html = await docxToHtml(buffer, values);
     }
 
-    // .docx — mammoth converte apenas o corpo do documento (sem cabeçalho/rodapé/imagens)
-    const html = await docxToHtml(buffer, values);
     return { html };
   } catch (err) {
     console.error('Erro ao renderizar template:', err);

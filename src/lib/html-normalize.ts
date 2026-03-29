@@ -2,18 +2,22 @@
  * Normalização inteligente do HTML gerado pelo mammoth/markdown para
  * exibição no preview com formatação ABNT impecável.
  *
- * Problemas tratados:
+ * Problemas tratados pelo Scanner ABNT:
  *  1. Parágrafos vazios (espaçadores do Word) → removidos
- *  2. Parágrafos em negrito + caixa alta usados como títulos (sem style Heading) → <h1>/<h2>/<h3>
+ *  2. Parágrafos em negrito + caixa alta usados como títulos → <h1>/<h2>/<h3>
  *  3. Espaçamento duplicado entre seções → colapsado
- *  4. Runs redundantes sem formatação → simplificados
+ *  4. Purificação de ruídos (spans vazios, &nbsp;, espaços duplos)
+ *  5. Scanner de contexto ABNT → remove recuo após títulos e em metadados
  */
 
 // ── Helpers ──────────────────────────────────────────────────
 
 /** Verifica se o texto é composto predominantemente de letras maiúsculas. */
 function isUpperCase(text: string): boolean {
-  const letters = text.replace(/[^a-zA-ZÀ-ÿ]/g, '');
+  // Strip variável placeholders ({{Foo}}) before checking case — lowercase in variable names
+  // must not affect the uppercase test of the surrounding content.
+  const withoutVars = text.replace(/\{\{[^}]+\}\}/g, '');
+  const letters = withoutVars.replace(/[^a-zA-ZÀ-ÿ]/g, '');
   if (letters.length === 0) return false;
   return letters === letters.toUpperCase();
 }
@@ -29,19 +33,35 @@ function isUpperCase(text: string): boolean {
 function headingLevel(text: string): 'h1' | 'h2' | 'h3' {
   if (/^\d+\.\d+/.test(text)) return 'h3';
   if (/^\d+[.)]\s/.test(text)) return 'h2';
+  // Título do documento (ex: "PARECER DIAAF Nº 001/2025") → h1 centralizado
+  if (/^PARECER\b/i.test(text)) return 'h1';
   return 'h2';
 }
 
 // ── Remoção de parágrafos vazios ─────────────────────────────
 
 /**
- * Remove <p> cujo conteúdo textual seja vazio (incluindo &nbsp;, <br>, espaços).
+ * Limpeza inicial de ruídos de HTML gerados por conversores.
+ */
+function purifyHtml(html: string): string {
+  let result = html;
+  // Remove &nbsp; e caracteres de controle invisíveis
+  result = result.replace(/&nbsp;|&#160;/g, ' ');
+  // Remove spans sem atributos que poluem a estrutura
+  result = result.replace(/<span>([^<]*)<\/span>/gi, '$1');
+  // Normaliza espaços múltiplos
+  result = result.replace(/[ \t]+/g, ' ');
+  return result;
+}
+
+/**
+ * Remove <p> cujo conteúdo textual seja vazio (incluindo <br>, espaços).
  */
 function removeEmptyParagraphs(html: string): string {
   return html.replace(
-    /<p([^>]*)>((?:\s|&nbsp;|&#160;|<br\s*\/?>)*)<\/p>/gi,
+    /<p([^>]*)>((?:\s|<br\s*\/?>)*)<\/p>/gi,
     (match, _attrs, inner) => {
-      const text = inner.replace(/<[^>]+>/g, '').replace(/&nbsp;|&#160;/g, '').trim();
+      const text = inner.replace(/<[^>]+>/g, '').trim();
       return text ? match : '';
     }
   );
@@ -113,7 +133,7 @@ function deduplicateHeadings(html: string): string {
 // ── Limpeza de spans vazios ou redundantes ───────────────────
 
 function cleanRedundantSpans(html: string): string {
-  // Remove <span> sem atributos
+  // Chamada via purifyHtml agora, mas mantido para compatibilidade se necessário
   return html.replace(/<span>([^<]*)<\/span>/gi, '$1');
 }
 
@@ -142,6 +162,59 @@ function mergeConsecutiveLists(html: string): string {
   return html.replace(/<\/ul>\s*<ul>/gi, '');
 }
 
+// ── Remoção de recuo após títulos ───────────────────────────
+
+/**
+ * ABNT NBR 14724: O primeiro parágrafo após um título não deve ter recuo.
+ * 
+ * Estratégia de Scanner Procedural:
+ * Em vez de uma regex cega, percorremos os blocos. Quando encontramos um h1-h3,
+ * o próximo parágrafo <p> obrigatoriamente recebe a classe .abnt-no-indent.
+ */
+function removeHeadingIndent(html: string): string {
+  // 1. Scanner de Títulos: Divide o HTML preservando os títulos (h1, h2, h3)
+  const parts = html.split(/(<h[1-3][^>]*>[\s\S]*?<\/h[1-3]>)/gi);
+  let result = '';
+  
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    result += part;
+    
+    // Se a parte atual for um título de seção (h1, h2, h3)
+    if (/<h[1-3][^>]*>[\s\S]*?<\/h[1-3]>/i.test(part)) {
+      // PROCURA GULOSA: Scanear as próximas partes até encontrar o primeiro parágrafo real
+      for (let j = i + 1; j < parts.length; j++) {
+        const nextPart = parts[j];
+        
+        // Se encontrarmos outro título antes de um parágrafo, paramos (seção sem corpo)
+        if (/<h[1-6][^>]*>/i.test(nextPart)) break;
+        
+        // Se encontrarmos um parágrafo <p>...
+        if (/<p([^>]*)>/i.test(nextPart)) {
+          parts[j] = nextPart.replace(/<p([^>]*)>/i, (match, attrs) => {
+            // REMOÇÃO REDUNDANTE: Remove qualquer estilo inline de text-indent que possa estar no parágrafo
+            let cleanAttrs = attrs.replace(/style="[^"]*text-indent:[^"]*"/gi, (styleMatch: string) => {
+               // Limpa apenas o indent de dentro do style
+               return styleMatch.replace(/text-indent\s*:\s*([^;]+);?/gi, '');
+            });
+
+            // Adiciona a classe abnt-no-indent
+            if (/class="/i.test(cleanAttrs)) {
+              return cleanAttrs.includes('abnt-no-indent') 
+                ? `<p${cleanAttrs}>` 
+                : `<p${cleanAttrs.replace(/class="([^"]*)"/i, 'class="$1 abnt-no-indent')}>`;
+            }
+            return `<p class="abnt-no-indent"${cleanAttrs}>`;
+          });
+          break; // Scanner atendeu a regra ABNT para esta transição
+        }
+      }
+    }
+  }
+  
+  return result;
+}
+
 // ── Padronização de Blocos Legais (Imagens) ───────────────────
 
 /**
@@ -152,7 +225,7 @@ function mergeConsecutiveLists(html: string): string {
  */
 function standardizeLegalBlocks(html: string): string {
   return html.replace(
-    /<p([^>]*)>(.*?)<\/p>/gi,
+    /<p([^>]*)>([\s\S]*?)<\/p>/gi,
     (match, attrs, inner) => {
       const text = inner.replace(/<[^>]+>/g, '').trim();
 
@@ -162,12 +235,15 @@ function standardizeLegalBlocks(html: string): string {
       }
 
       // 2. Metadados (Sem recuo, Alinhado à esquerda) - Processo, Interessado, Assunto, CPF, etc.
-      if (/^\s*(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°]|REF|AUTOS|REFERÊNCIA)/i.test(text)) {
+      const metaKeywords = 'PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°]|REF|AUTOS|REFERÊNCIA|VISTORIA|ENDEREÇO|INSCRIÇÃO';
+      const metaRegex = new RegExp(`^\\s*(${metaKeywords})`, 'i');
+      if (metaRegex.test(text)) {
         return `<p class="abnt-no-indent abnt-left">${inner}</p>`;
       }
 
-      // 3. Data (Alinhado à direita) - Padrão "Imperatriz, 12 de março de 2024"
-      if (/^[a-zA-ZÀ-ÿ\s]{2,30},\s*(?:\d{1,2}\s+de\s+[a-z]+\s+de\s+\d{4}|\{\{.+\}\})/i.test(text) || /^Imperatriz/i.test(text)) {
+      // 3. Data (Alinhado à direita) - Padrão "Cidade, 12 de março de 2024"
+      const dateRegex = /^[a-zA-ZÀ-ÿ\s]{2,40},\s*(?:\d{1,2}\s+de\s+[a-z]+\s+de\s+\d{4}|\{\{.+\}\})/i;
+      if (dateRegex.test(text) || /^Imperatriz/i.test(text)) {
         return `<p class="abnt-right abnt-data-block">${inner}</p>`;
       }
 
@@ -207,13 +283,24 @@ export function normalizeDocumentHtml(html: string): string {
   if (!html.trim()) return html;
 
   let result = html;
+  
+  // FASE 1: Scanner de Purificação
+  result = purifyHtml(result);
   result = removeEmptyParagraphs(result);
+  
+  // FASE 2: Scanner de Estrutura
   result = promoteManualHeadings(result);
   result = deduplicateHeadings(result);
   result = normalizeManualBullets(result);
   result = mergeConsecutiveLists(result);
+  
+  // FASE 3: Scanner ABNT de Contexto
   result = standardizeLegalBlocks(result);
-  result = cleanRedundantSpans(result);
+  // Nota: pareceres fiscais recuam TODOS os parágrafos de corpo (incluindo o primeiro
+  // após título). A regra "sem recuo no 1º parágrafo de seção" é da ABNT acadêmica
+  // e não se aplica aqui. removeHeadingIndent() foi removida do pipeline.
+  
+  // FASE 4: Polimento de Layout
   result = collapseBlankGaps(result);
 
   return result;

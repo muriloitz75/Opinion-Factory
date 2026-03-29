@@ -73,25 +73,18 @@ async function applyMasterEnvelope(contentBuffer: Buffer): Promise<Buffer> {
     let injectedContent = contentMatch ? contentMatch[1] : '';
 
     if (injectedContent) {
-      // 1. Aplicar 12pt de distância do cabeçalho (w:before="240" no primeiro parágrafo)
-      injectedContent = injectedContent.replace(/<w:p(?: [^>]*)?>/, (match) => {
-        let pPr = '';
-        const pPrMatch = match.match(/<w:pPr(?: [^>]*)?>[\s\S]*?<\/w:pPr>/);
-        if (pPrMatch) pPr = pPrMatch[0];
-        else pPr = '<w:pPr></w:pPr>';
+      // BUG#4 FIX: Em vez de injetar w:before no primeiro <w:p> (que pode ser um bloco
+      // de metadados com before=0), adicionamos um parágrafo vazio de espaçamento
+      // dedicado (12pt) antes de todo o conteúdo. Isso preserva o before=0 dos metadados.
+      const spacerParagraph = '<w:p><w:pPr><w:spacing w:before="240" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:p>';
+      injectedContent = spacerParagraph + injectedContent;
 
-        const modifiedPPr = setXmlTag(pPr, 'w:spacing', 'w:before', '240');
-        
-        if (pPrMatch) return match.replace(pPr, modifiedPPr);
-        return match.replace(/(<w:p(?: [^>]*)?>)/, `$1${modifiedPPr}`);
-      });
-
-      // 2. Aplicar 6pt de distância do rodapé (w:after="120" no último parágrafo)
-      const pBlocks = injectedContent.match(/<w:p(?: [^>]*)?>[\s\S]*?<\/w:p>/g);
+      // Aplicar 6pt de distância do rodapé (w:after="120" no último parágrafo real)
+      const pBlocks = injectedContent.match(/<w:p(?: [^>]*)?>(?:(?!<\/w:p>)[\s\S])*?<\/w:p>/g);
       if (pBlocks && pBlocks.length > 0) {
         const lastP = pBlocks[pBlocks.length - 1];
         let pPr = '';
-        const pPrMatch = lastP.match(/<w:pPr(?: [^>]*)?>[\s\S]*?<\/w:pPr>/);
+        const pPrMatch = lastP.match(/<w:pPr(?: [^>]*)>([\s\S]*?)<\/w:pPr>/);
         if (pPrMatch) pPr = pPrMatch[0];
         else pPr = '<w:pPr></w:pPr>';
 
@@ -137,19 +130,26 @@ async function applyMasterEnvelope(contentBuffer: Buffer): Promise<Buffer> {
 }
 
 /**
- * Normaliza o XML do Word para garantir que blocos legais tenham o alinhamento 
+ * Normaliza o XML do Word para garantir que blocos legais tenham o alinhamento
  * e espaçamento corretos, replicando a lógica do preview HTML.
  */
 function standardizeDocxXml(xml: string): string {
-  // Regex para identificar parágrafos. Usamos [\s\S]*? para capturar múltiplas linhas.
-  return xml.replace(/<w:p(?: [^>]*)?>[\s\S]*?<\/w:p>/g, (pMatch) => {
+  // BUG#6 FIX: Isola o conteúdo de tabelas para não processar seus parágrafos internos.
+  // Substitui temporariamente blocos <w:tbl>...</w:tbl> por placeholders e os restaura no final.
+  const tableBlocks: string[] = [];
+  const xmlWithoutTables = xml.replace(/<w:tbl[\s\S]*?<\/w:tbl>/g, (tblMatch) => {
+    tableBlocks.push(tblMatch);
+    return `<!--TBL_PLACEHOLDER_${tableBlocks.length - 1}-->`;
+  });
+
+  const processedXml = xmlWithoutTables.replace(/<w:p(?: [^>]*)?>(?:(?!<\/w:p>)[\s\S])*?<\/w:p>/g, (pMatch) => {
     // Remove tags XML para obter apenas o texto puro do parágrafo
     const text = pMatch.replace(/<[^>]+>/g, '').trim();
     if (!text) return pMatch;
 
     // Localiza ou inicializa as propriedades do parágrafo (w:pPr)
     let pPr = '';
-    const pPrMatch = pMatch.match(/<w:pPr(?: [^>]*)?>[\s\S]*?<\/w:pPr>/);
+    const pPrMatch = pMatch.match(/<w:pPr(?: [^>]*)?>([\s\S]*?)<\/w:pPr>/);
     if (pPrMatch) {
       pPr = pPrMatch[0];
     } else {
@@ -158,10 +158,16 @@ function standardizeDocxXml(xml: string): string {
 
     let modifiedPPr = pPr;
 
-    // Detecção refinada para metadados e blocos legais
+    // BUG#2 FIX: Regex de data ampliada para capturar datas preenchidas (após render).
+    // Antes: detectava apenas {{variavel}}. Agora: detecta também datas no formato
+    // "Cidade, 15 de março de 2025" ou ainda templates não preenchidos.
+    const isDate =
+      /^[a-zA-ZÀ-ÿ\s]+,\s*(?:\d{1,2}\s+de\s+[a-zA-ZÀ-ÿ]+\s+de\s+\d{4}|\{\{.+\}\})/i.test(text);
+
+    // Detecção dos demais blocos legais
     const isParecer = (text.toUpperCase() === 'PARECER' || (text.toUpperCase().startsWith('PARECER') && text.length < 30));
-    const isClosing = text.includes('É o parecer. Submeto à douta consideração superior.');
-    const isDate = /^[a-zA-ZÀ-ÿ\s]+,\s*\{\{.+\}\}/i.test(text) || /^Imperatriz/i.test(text);
+    const isClosing = /submeto à douta consideração superior/i.test(text);
+    const isMetadata = /^\s*(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°]|REF|AUTOS|REFERÊNCIA)/i.test(text);
 
     // 1. Parecer (Centralizado)
     if (isParecer) {
@@ -169,17 +175,19 @@ function standardizeDocxXml(xml: string): string {
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:firstLine', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:left', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:right', '0');
+      // BUG#3 FIX: Zerar w:hanging para evitar conflito com firstLine=0
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:hanging', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:after', '240');
     }
     // 2. Metadados (Esquerda, Sem recuo, Espaçamento simples)
-    else if (/^\s*(PROCESSO|INTERESSADO|ASSUNTO|CPF|CNPJ|N[º°]|REF|AUTOS|REFERÊNCIA)/i.test(text)) {
+    else if (isMetadata) {
       modifiedPPr = setXmlTag(modifiedPPr, 'w:jc', 'w:val', 'left');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:firstLine', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:left', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:right', '0');
+      // BUG#3 FIX: Zerar w:hanging residual do template
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:hanging', '0');
-      // Espaçamento compacto (simples) e zero após
-      modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:line', '240');
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:line', '360'); // 1,5 (paridade com preview HTML)
       modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:lineRule', 'auto');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:after', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:before', '0');
@@ -190,6 +198,8 @@ function standardizeDocxXml(xml: string): string {
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:firstLine', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:left', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:right', '0');
+      // BUG#3 FIX
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:hanging', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:before', '240');
     }
     // 4. Fecho (Sem recuo, 6pt sup)
@@ -198,7 +208,19 @@ function standardizeDocxXml(xml: string): string {
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:firstLine', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:left', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:right', '0');
+      // BUG#3 FIX
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:hanging', '0');
       modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:before', '120');
+    }
+    // BUG#1 FIX: Parágrafos normais de corpo — garantir conformidade ABNT
+    // firstLine: 1250 twips (1,25cm), justified, espaçamento 1.5 (360 twips)
+    else {
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:jc', 'w:val', 'both');
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:firstLine', '709'); // 1.25cm = ~709 twips (1440/2.54*1.25)
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:left', '0');        // Zera margem esquerda herdada do template
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:ind', 'w:hanging', '0');    // Zera hanging indent herdado do template
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:line', '360');
+      modifiedPPr = setXmlTag(modifiedPPr, 'w:spacing', 'w:lineRule', 'auto');
     }
 
     if (modifiedPPr !== pPr) {
@@ -211,7 +233,11 @@ function standardizeDocxXml(xml: string): string {
 
     return pMatch;
   });
+
+  // Restaura os blocos de tabela nos seus lugares originais
+  return processedXml.replace(/<!--TBL_PLACEHOLDER_(\d+)-->/g, (_, idx) => tableBlocks[parseInt(idx)]);
 }
+
 
 /**
  * Função utilitária para injetar ou atualizar tags de propriedade no XML.

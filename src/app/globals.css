@@ -576,7 +576,7 @@ body {
 }
 
 .paper-content p.abnt-no-indent {
-  text-indent: 0;
+  text-indent: 0 !important;
 }
 
 .paper-content p.abnt-left {
