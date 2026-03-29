@@ -119,9 +119,9 @@ function blockToParagraphs(block: TemplateJsonBlock, idx: number, blocks: Templa
         indent = { firstLine: 0 };
         spacing = { line: LINE, after: 0, before: 0 };
       }
-      // 3. Data (Direita)
+      // 3. Data (Direita) — detecta DD de mês de AAAA, DD/MM/AAAA ou placeholder {{var}}
       else if (
-        /^[a-zA-ZÀ-ÿ\s]+,\s*(?:\d{1,2}\s+de\s+[a-zA-ZÀ-ÿ]+\s+de\s+\d{4}|\{\{.+\}\})/i.test(plain)
+        /^[a-zA-ZÀ-ÿ\s]+,\s*(?:\d{1,2}\s+de\s+[a-zA-ZÀ-ÿ]+\s+de\s+\d{4}|\d{1,2}\/\d{2}\/\d{4}|\{\{.+\}\})/i.test(plain)
       ) {
         alignment = AlignmentType.RIGHT;
         indent = { firstLine: 0 };

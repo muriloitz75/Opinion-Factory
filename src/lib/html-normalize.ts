@@ -227,7 +227,8 @@ function standardizeLegalBlocks(html: string): string {
   return html.replace(
     /<p([^>]*)>([\s\S]*?)<\/p>/gi,
     (match, attrs, inner) => {
-      const text = inner.replace(/<[^>]+>/g, '').trim();
+      // Strip PUA markers (\uE010…\uE011) usados pelo pipeline de preview .docx antes da comparação.
+      const text = inner.replace(/<[^>]+>/g, '').replace(/[\uE010\uE011]/g, '').trim();
 
       // 1. Parecer (Centralizado) - Apenas se for a palavra isolada ou início curto
       if (text.toUpperCase() === 'PARECER' || (text.toUpperCase().startsWith('PARECER') && text.length < 30)) {
@@ -241,9 +242,9 @@ function standardizeLegalBlocks(html: string): string {
         return `<p class="abnt-no-indent abnt-left">${inner}</p>`;
       }
 
-      // 3. Data (Alinhado à direita) - Padrão "Cidade, 12 de março de 2024"
-      const dateRegex = /^[a-zA-ZÀ-ÿ\s]{2,40},\s*(?:\d{1,2}\s+de\s+[a-z]+\s+de\s+\d{4}|\{\{.+\}\})/i;
-      if (dateRegex.test(text) || /^Imperatriz/i.test(text)) {
+      // 3. Data (Alinhado à direita) — detecta DD de mês de AAAA, DD/MM/AAAA ou placeholder {{var}}
+      const dateRegex = /^[a-zA-ZÀ-ÿ\s]{2,40},\s*(?:\d{1,2}\s+de\s+[a-z]+\s+de\s+\d{4}|\d{1,2}\/\d{2}\/\d{4}|\{\{.+\}\})/i;
+      if (dateRegex.test(text)) {
         return `<p class="abnt-right abnt-data-block">${inner}</p>`;
       }
 

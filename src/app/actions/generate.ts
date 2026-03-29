@@ -159,10 +159,9 @@ function standardizeDocxXml(xml: string): string {
     let modifiedPPr = pPr;
 
     // BUG#2 FIX: Regex de data ampliada para capturar datas preenchidas (após render).
-    // Antes: detectava apenas {{variavel}}. Agora: detecta também datas no formato
-    // "Cidade, 15 de março de 2025" ou ainda templates não preenchidos.
+    // Formatos suportados: "Cidade, DD de mês de AAAA", "Cidade, DD/MM/AAAA", ou placeholder {{var}}.
     const isDate =
-      /^[a-zA-ZÀ-ÿ\s]+,\s*(?:\d{1,2}\s+de\s+[a-zA-ZÀ-ÿ]+\s+de\s+\d{4}|\{\{.+\}\})/i.test(text);
+      /^[a-zA-ZÀ-ÿ\s]+,\s*(?:\d{1,2}\s+de\s+[a-zA-ZÀ-ÿ]+\s+de\s+\d{4}|\d{1,2}\/\d{2}\/\d{4}|\{\{.+\}\})/i.test(text);
 
     // Detecção dos demais blocos legais
     const isParecer = (text.toUpperCase() === 'PARECER' || (text.toUpperCase().startsWith('PARECER') && text.length < 30));
