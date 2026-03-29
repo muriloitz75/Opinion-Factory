@@ -738,6 +738,11 @@ body {
   margin: 12pt 0;
 }
 
+/* ── Variáveis preenchidas (preview only) ── */
+.paper-content .var-filled {
+  color: #cc0000;
+}
+
 /* ── Inline ── */
 .paper-content strong,
 .paper-content b {

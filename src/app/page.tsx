@@ -69,6 +69,41 @@ export default function Home() {
     }));
   };
 
+  /** Converte valores de data de AAAA-MM-DD (padrão HTML) para DD/MM/AAAA (padrão brasileiro). */
+  const formatValuesForOutput = (values: Record<string, string>): Record<string, string> => {
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(values)) {
+      if (k.toLowerCase().includes('data') && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+        const [year, month, day] = v.split('-');
+        out[k] = `${day}/${month}/${year}`;
+      } else {
+        out[k] = v;
+      }
+    }
+    return out;
+  };
+
+  const applyMask = (name: string, value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    const key = name.toLowerCase();
+    if (key.includes('cnpj')) {
+      const d = digits.slice(0, 14);
+      if (d.length <= 2) return d;
+      if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+      if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+      if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+      return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+    }
+    if (key.includes('cpf')) {
+      const d = digits.slice(0, 11);
+      if (d.length <= 3) return d;
+      if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+      if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+      return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+    }
+    return value;
+  };
+
   const handleClearFields = () => {
     if (!selectedTemplate) return;
     const cleared: Record<string, string> = {};
@@ -181,13 +216,13 @@ export default function Home() {
 
   useEffect(() => {
     if (!selectedTemplate) return;
-    triggerPreview(selectedTemplate.filename, formData);
+    triggerPreview(selectedTemplate.filename, formatValuesForOutput(formData));
   }, [selectedTemplate, formData, triggerPreview]);
 
   const handleGenerate = async () => {
     if (!selectedTemplate || generating) return;
     setGenerating(true);
-    const result = await generateFilledDocx(selectedTemplate.filename, formData);
+    const result = await generateFilledDocx(selectedTemplate.filename, formatValuesForOutput(formData));
     if (result.error || !result.base64) {
       alert('Erro ao gerar documento: ' + (result.error ?? 'Falha desconhecida'));
       setGenerating(false);
@@ -241,7 +276,7 @@ export default function Home() {
         </div>
         <div className="app-header-actions">
           <button className="btn btn-outline" onClick={() => setShowUploadModal(true)}>
-            <Upload size={14} /> Upload Template
+            <Upload size={14} /> Carregar Modelo
           </button>
           <button className="btn-icon btn-icon--ghost" onClick={handleExit} title="Sair da aplicação">
             <LogOut size={16} />
@@ -271,12 +306,13 @@ export default function Home() {
 
           {/* Template Selector */}
           <div className="sidebar-section">
-            <p className="sidebar-label"><FileSearch size={14} /> Modelo do Documento</p>
+            <p className="sidebar-label"><FileSearch size={14} /> Tipos de Parecer Fiscal</p>
             <div className="template-select-row">
               <div className="select-wrapper">
                 <select
                   className="select-field"
                   value={selectedTemplate?.name ?? ''}
+                  title={selectedTemplate ? `${selectedTemplate.name}${selectedTemplate.type === 'markdown' ? ' (.md)' : ''}` : ''}
                   onChange={e => {
                     const t = templates.find(t => t.name === e.target.value);
                     if (t) handleSelectTemplate(t);
@@ -329,7 +365,11 @@ export default function Home() {
                       type={v.toLowerCase().includes('data') ? 'date' : 'text'}
                       className="input-field"
                       value={formData[v] ?? ''}
-                      onChange={e => handleInputChange(v, e.target.value)}
+                      placeholder={
+                        v.toLowerCase().includes('cnpj') ? '00.000.000/0000-00' :
+                        v.toLowerCase().includes('cpf') ? '000.000.000-00' : undefined
+                      }
+                      onChange={e => handleInputChange(v, applyMask(v, e.target.value))}
                     />
                   </motion.div>
                 ))
@@ -348,7 +388,7 @@ export default function Home() {
                   </p>
                   {templates.length === 0 && (
                     <button className="btn btn-outline" style={{ marginTop: 8 }} onClick={() => setShowUploadModal(true)}>
-                      <Upload size={13} /> Upload Template
+                      <Upload size={13} /> Carregar Modelo
                     </button>
                   )}
                 </div>
@@ -365,7 +405,7 @@ export default function Home() {
             >
               {generating
                 ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Gerando…</>
-                : <><Download size={14} /> Gerar e Baixar .docx</>}
+                : <><Download size={14} /> Gerar Parecer Fiscal </>}
             </button>
           </div>
         </aside>
@@ -373,7 +413,7 @@ export default function Home() {
         {/* ── Preview ── */}
         <div className="preview-workspace">
           <div className="preview-toolbar">
-            <span className="preview-badge"><FileText size={11} /> Preview ABNT</span>
+            <span className="preview-badge"><FileText size={11} /> Preview do Parecer Fiscal</span>
             <div className="preview-toolbar-right">
               {pageCount > 0 && !rendering && (
                 <span className="preview-badge">

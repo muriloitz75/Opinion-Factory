@@ -5,6 +5,7 @@ import path from 'path';
 import { revalidatePath } from 'next/cache';
 import { extractVariablesFromDocx } from '@/lib/template-docx';
 import { extractVariablesFromMarkdown } from '@/lib/template-markdown';
+import { normalizeMarkdown } from '@/lib/markdown-normalizer';
 
 const DOCS_PATH = () => path.join(process.cwd(), 'Docs');
 
@@ -25,14 +26,16 @@ export async function uploadTemplate(formData: FormData) {
     const baseName = path.basename(file.name, '.docx');
     await fs.writeFile(path.join(DOCS_PATH(), `${baseName}.docx`), buffer);
   } else if (name.endsWith('.md')) {
-    const content = buffer.toString('utf-8');
+    const rawContent = buffer.toString('utf-8');
+    let content: string;
     try {
+      content = normalizeMarkdown(rawContent);
       extractVariablesFromMarkdown(content);
     } catch {
       return { success: false, error: 'Arquivo .md inválido' };
     }
     const baseName = path.basename(file.name, '.md');
-    await fs.writeFile(path.join(DOCS_PATH(), `${baseName}.md`), buffer);
+    await fs.writeFile(path.join(DOCS_PATH(), `${baseName}.md`), content, 'utf-8');
   } else {
     return { success: false, error: 'Apenas arquivos .docx ou .md são aceitos' };
   }

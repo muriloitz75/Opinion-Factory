@@ -168,19 +168,18 @@ function blockToParagraphs(block: TemplateJsonBlock, idx: number, blocks: Templa
  * compatível com a camada de estilos ABNT do paper-content.
  */
 export function markdownToHtml(content: string, values: Record<string, string>): string {
+  // Gera o HTML com {{key}} ainda no lugar — variáveis NÃO são substituídas antes
+  // da normalização para que a detecção de blocos (PARECER, metadata, data) funcione
+  // corretamente com placeholders, e para que possamos colorir os valores depois.
   const parsed = markdownToTemplateJson(content);
-  const filled = replaceVariablesInTemplateJson(parsed, values);
 
-  const raw = filled.blocks
+  const raw = parsed.blocks
     .map(block => {
       if (block.type === 'heading') {
         const l = block.level;
         return `<h${l}>${blockTextToHtml(block.text)}</h${l}>`;
       }
       if (block.type === 'paragraph') {
-        // Divide em <p> separados para que cada linha receba text-indent independente.
-        // Hard-breaks ("  " no markdown) geram \n no texto; sem essa divisão, só a
-        // primeira linha de um <p> recebe o recuo ABNT — as demais ficam sem indent.
         const lines = block.text.split('\n').filter(l => l.trim());
         return lines.map(l => `<p>${blockTextToHtml(l)}</p>`).join('\n');
       }
@@ -193,7 +192,18 @@ export function markdownToHtml(content: string, values: Record<string, string>):
     })
     .join('\n');
 
-  return normalizeDocumentHtml(raw);
+  let html = normalizeDocumentHtml(raw);
+
+  // Substitui {{key}} por span colorido quando preenchido, ou mantém o placeholder.
+  for (const [key, value] of Object.entries(values)) {
+    const re = new RegExp(`\\{\\{${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\}\\}`, 'g');
+    if (value) {
+      const safe = value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      html = html.replace(re, `<span class="var-filled">${safe}</span>`);
+    }
+  }
+
+  return html;
 }
 
 export function extractVariablesFromMarkdown(content: string): string[] {

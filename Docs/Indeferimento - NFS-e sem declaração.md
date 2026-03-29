@@ -1,14 +1,14 @@
-
-
 **PARECER DIAAF Nº {{Parecer}}**
 
 PROCESSO Nº: **{{Processo}}**  
+
 INTERESSADO: **{{Interessado}}**            CNPJ: **{{CNPJ}}**  
+
 ASSUNTO: **CANCELAMENTO DE NOTAS FISCAIS DE SERVIÇOS ELETRÔNICAS**
 
 1. **RELATÓRIO**
 
-Trata-se de requerimento protocolado pelo contribuinte {{Interessado}}, sob o número  {{Processo}}, solicitando o cancelamento da Nota Fiscal de Serviço Eletrônica (NFS-e) nº {{NFSe}} sob a alegação de Divergência de Tomador.   
+Trata-se de requerimento protocolado pelo contribuinte {{Interessado}}, sob o número  {{Processo}}, solicitando o cancelamento da Nota Fiscal de Serviço Eletrônica (NFS-e) nº {{NFSe}} sob a alegação de Divergência de Tomador.  
 O requerente fundamenta seu pedido no inciso II, § 1º, do artigo 72 do Decreto nº 019/2023, que permite o cancelamento da NFS-e nos casos de discrepância na emissão, desde que devidamente comprovada. Contudo, ao analisar a documentação anexada ao pedido, verificou-se a ausência da Declaração do tomador originalmente indicado na NFS-e, atestando que não contratou e não recebeu os serviços descritos no documento fiscal.
 
 2. **FUNDAMENTAÇÃO LEGAL**
@@ -30,4 +30,3 @@ Caso o contribuinte ainda tenha interesse no cancelamento, poderá protocolar no
 É o parecer. Submeto à douta consideração superior.
 
 Imperatriz, {{Data}}
-

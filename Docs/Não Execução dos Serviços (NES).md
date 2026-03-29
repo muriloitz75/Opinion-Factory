@@ -1,9 +1,9 @@
-
-
 **PARECER DIAAF Nº {{Parecer}}**
 
 PROCESSO Nº: **{{Processo}}**  
+
 INTERESSADO: **{{Interessado}}**            CNPJ/CPF: **{{CNPJ}}**  
+
 ASSUNTO: **CANCELAMENTO DE NOTAS FISCAIS DE SERVIÇOS ELETRÔNICAS**
 
 1. **CONTEXTUALIZAÇÃO**
@@ -11,7 +11,6 @@ ASSUNTO: **CANCELAMENTO DE NOTAS FISCAIS DE SERVIÇOS ELETRÔNICAS**
 Foi apresentada uma solicitação de cancelamento da Nota Fiscal de Serviço nº {{NFSe}}, emitida em {{Emissão1}}, pela empresa {{Interessado}}, inscrita no CNPJ sob o nº {{CNPJ}}. A solicitação foi fundamentada na alegação de que o serviço descrito na nota fiscal não foi executado.
 
 2. **ANÁLISE DOS FATOS**  
-   
 
 De acordo com a documentação anexada ao processo, verificou-se que o serviço especificado na Nota Fiscal de Serviço nº {{NFSe}} não foi efetivamente prestado. A análise se baseia nos seguintes pontos:
 
@@ -29,5 +28,3 @@ Diante da análise dos documentos e das informações apresentadas, é possível
 É o parecer. Submeto à douta consideração superior.
 
 Imperatriz, {{Data}}
-
-	

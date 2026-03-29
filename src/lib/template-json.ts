@@ -1,3 +1,5 @@
+import { normalizeMarkdown } from './markdown-normalizer';
+
 export type TemplateJsonBlock =
   | { type: 'heading'; level: 1 | 2 | 3 | 4 | 5 | 6; text: string }
   | { type: 'paragraph'; text: string }
@@ -33,7 +35,7 @@ export function blockTextToHtml(text: string): string {
 }
 
 export function markdownToTemplateJson(markdown: string): TemplateJsonDocument {
-  const lines = markdown.replace(/\r\n/g, '\n').split('\n');
+  const lines = normalizeMarkdown(markdown).split('\n');
   const blocks: TemplateJsonBlock[] = [];
   const paragraphBuffer: string[] = [];
 

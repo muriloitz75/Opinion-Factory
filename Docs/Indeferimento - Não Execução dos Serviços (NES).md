@@ -1,8 +1,9 @@
-  
 **PARECER DIAAF Nº {{Parecer}}**
 
 PROCESSO Nº: **{{Processo}}**  
+
 INTERESSADO: **{{Interessado}}**            CNPJ: **{{CNPJ}}**  
+
 ASSUNTO: **CANCELAMENTO DE NOTAS FISCAIS DE SERVIÇOS ELETRÔNICAS**
 
 1. **RELATÓRIO**
@@ -31,5 +32,3 @@ Caso o contribuinte ainda tenha interesse no cancelamento, poderá protocolar no
 É o parecer. Submeto à douta consideração superior.
 
 Imperatriz, {{Data}}
-
-	

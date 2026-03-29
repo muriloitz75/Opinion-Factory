@@ -38,7 +38,16 @@ export async function docxToHtml(
   const safeValues = Object.fromEntries(
     Object.entries(values).map(([k, v]) => [k, v ?? ''])
   );
-  doc.render(safeValues);
+
+  // Marcadores em PUA Unicode — sobrevivem ao pipeline DOCX→mammoth e são
+  // improváveis em texto jurídico. Permitem identificar valores preenchidos
+  // para colori-los no preview sem ambiguidade.
+  const VS = '\uE010'; // VAR_START
+  const VE = '\uE011'; // VAR_END
+  const previewValues = Object.fromEntries(
+    Object.entries(safeValues).map(([k, v]) => [k, v ? `${VS}${v}${VE}` : ''])
+  );
+  doc.render(previewValues);
 
   const filled = doc.getZip().generate({ type: 'nodebuffer' });
 
@@ -97,5 +106,10 @@ export async function docxToHtml(
     }
   );
 
-  return normalizeDocumentHtml(value);
+  let html = normalizeDocumentHtml(value);
+
+  // Substitui marcadores por spans coloridos para o preview
+  html = html.replace(/\uE010([^\uE011]*)\uE011/g, '<span class="var-filled">$1</span>');
+
+  return html;
 }
