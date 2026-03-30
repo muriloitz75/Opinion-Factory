@@ -50,7 +50,7 @@ function parseEslint(stdout: string) {
     const m = line.match(/(.+):(\d+):(\d+):\s+(error|warning)\s+(.+)\s+([\w/@-]+)$/);
     if (m) issues.push({ file: m[1].replace(ROOT, '').replace(/\\/g, '/').replace(/^\//, ''), line: +m[2], column: +m[3], severity: m[4], message: m[5].trim(), rule: m[6] });
   }
-  return { errors: issues.filter((i: any) => i.severity === 'error').length, warnings: issues.filter((i: any) => i.severity === 'warning').length, issues };
+  return { errors: issues.filter((i) => (i as { severity: string }).severity === 'error').length, warnings: issues.filter((i) => (i as { severity: string }).severity === 'warning').length, issues };
 }
 
 async function findTestFiles(dir: string): Promise<string[]> {

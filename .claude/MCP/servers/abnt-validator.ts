@@ -84,7 +84,7 @@ function validateVarNames(content: string) {
     else if (/[À-ÿ]/.test(name))
       issues.push({ variable: name, severity: 'warning', issue: 'Nome com acentos — pode causar problemas de codificação' });
   }
-  return { valid: issues.filter((i: any) => i.severity === 'error').length === 0, issues };
+  return { valid: issues.filter((i) => (i as { severity: string }).severity === 'error').length === 0, issues };
 }
 
 // ── Servidor ─────────────────────────────────────────────────
@@ -134,13 +134,13 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
   const text = (v: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(v, null, 2) }] });
 
   switch (name) {
-    case 'validate_markdown_structure': return text(validateStructure((a as any).content));
-    case 'validate_variable_names':     return text(validateVarNames((a as any).content));
+    case 'validate_markdown_structure': return text(validateStructure((a as { content: string }).content));
+    case 'validate_variable_names':     return text(validateVarNames((a as { content: string }).content));
 
     case 'classify_block': {
       const { line } = a as { line: string };
       const type = classifyLine(line);
-      return text({ type, isolated: ISOLATED.has(type), abntSpec: (ABNT_SPEC.blockTypes as any)[type] ?? null });
+      return text({ type, isolated: ISOLATED.has(type), abntSpec: (ABNT_SPEC.blockTypes as Record<string, unknown>)[type] ?? null });
     }
 
     case 'validate_html_blocks': {
@@ -188,7 +188,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (req) => {
   const map: Record<string, unknown> = {
     'abnt://spec':           ABNT_SPEC,
     'abnt://block-patterns': Object.fromEntries(Object.entries(PATTERNS).map(([k, v]) => [k, v.toString()])),
-    'abnt://css-classes':    Object.fromEntries(Object.entries(ABNT_SPEC.blockTypes).map(([k, v]) => [k, (v as any).cssClass])),
+    'abnt://css-classes':    Object.fromEntries(Object.entries(ABNT_SPEC.blockTypes).map(([k, v]) => [k, (v as { cssClass: string }).cssClass])),
   };
   if (uri in map) return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(map[uri], null, 2) }] };
   throw new Error(`Resource desconhecido: ${uri}`);

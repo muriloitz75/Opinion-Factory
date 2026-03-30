@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ferramentas internas — não são código da aplicação
+    ".claude/**",
   ]),
 ]);
 
