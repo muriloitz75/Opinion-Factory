@@ -26,6 +26,9 @@
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0"
   },
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.28.0",
     "@types/html2pdf.js": "^0.10.0",
